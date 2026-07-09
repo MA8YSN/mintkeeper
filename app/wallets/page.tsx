@@ -8,6 +8,7 @@ type Wallet = {
   name: string;
   address: string;
   created_at: string;
+  user_id: string | null;
 };
 
 type FormState = {
@@ -49,6 +50,7 @@ export default function WalletsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -61,11 +63,19 @@ export default function WalletsPage() {
 
   const handleSave = async () => {
     if (!form.name.trim() || !form.address.trim()) return;
+    setSaving(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      console.error("Insert error: no signed-in user");
+      setSaving(false);
+      return;
+    }
     const { data, error } = await supabase
       .from("wallets")
-      .insert([{ name: form.name.trim(), address: form.address.trim() }])
+      .insert([{ name: form.name.trim(), address: form.address.trim(), user_id: user.id }])
       .select()
       .single();
+    setSaving(false);
     if (error) { console.error("Insert error:", error.message); return; }
     if (data) setWallets((prev) => [data, ...prev]);
     setIsModalOpen(false);
@@ -84,28 +94,28 @@ export default function WalletsPage() {
     <div className="relative min-h-screen overflow-hidden bg-zinc-950">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(16,185,129,0.15),transparent)]" aria-hidden="true" />
 
-      <div className="relative mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
-        <header className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between mb-10">
-          <div>
-            <Link href="/" className="mb-4 inline-flex items-center gap-2 text-sm text-zinc-500 hover:text-zinc-300 transition-colors">
+      <div className="relative mx-auto max-w-4xl px-3 py-6 sm:px-6 sm:py-12 md:px-8">
+        <header className="mb-8 flex flex-col gap-4 sm:mb-10 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
+          <div className="min-w-0">
+            <Link href="/" className="mb-3 inline-flex items-center gap-2 text-sm text-zinc-500 hover:text-zinc-300 transition-colors sm:mb-4">
               ← Back to Projects
             </Link>
-            <h1 className="text-3xl font-bold tracking-tight text-white">Wallets</h1>
-            <p className="mt-2 text-base text-zinc-400">{wallets.length} wallet{wallets.length !== 1 ? "s" : ""} saved</p>
+            <h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">Wallets</h1>
+            <p className="mt-2 text-sm text-zinc-400 sm:text-base">{wallets.length} wallet{wallets.length !== 1 ? "s" : ""} saved</p>
           </div>
           <button
             type="button"
             onClick={() => setIsModalOpen(true)}
-            className="inline-flex shrink-0 items-center justify-center gap-2 self-start rounded-xl bg-emerald-500 px-5 py-2.5 text-sm font-semibold text-zinc-950 shadow-lg shadow-emerald-500/20 transition-all hover:bg-emerald-400 active:scale-[0.98]"
+            className="inline-flex w-full shrink-0 items-center justify-center gap-2 self-start rounded-xl bg-emerald-500 px-4 py-2.5 text-sm font-semibold text-zinc-950 shadow-lg shadow-emerald-500/20 transition-all hover:bg-emerald-400 active:scale-[0.98] sm:w-auto sm:px-5"
           >
             <PlusIcon />
             Add Wallet
           </button>
         </header>
 
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-3 sm:gap-4 sm:grid-cols-2">
           {wallets.map((wallet) => (
-            <div key={wallet.id} className="relative flex flex-col gap-3 rounded-2xl border border-zinc-800/80 bg-zinc-900/50 p-5">
+            <div key={wallet.id} className="relative flex flex-col gap-2 rounded-2xl border border-zinc-800/80 bg-zinc-900/50 p-4 sm:gap-3 sm:p-5">
               <button
                 type="button"
                 onClick={() => setDeleteTargetId(wallet.id)}
@@ -122,7 +132,7 @@ export default function WalletsPage() {
           ))}
 
           {wallets.length === 0 && (
-            <div className="col-span-2 rounded-2xl border border-dashed border-zinc-800 p-10 text-center text-zinc-600">
+            <div className="col-span-full rounded-2xl border border-dashed border-zinc-800 p-8 text-center text-sm text-zinc-600 sm:p-10">
               No wallets yet. Add one to get started.
             </div>
           )}
@@ -146,14 +156,14 @@ export default function WalletsPage() {
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true">
           <button type="button" className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => { setIsModalOpen(false); setForm(emptyForm); }} />
-          <div className="relative w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-900 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-zinc-800 px-6 py-4">
+          <div className="relative w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-900 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-zinc-800 px-4 py-3 sm:px-6 sm:py-4">
               <h2 className="text-lg font-semibold text-white">Add Wallet</h2>
               <button type="button" onClick={() => { setIsModalOpen(false); setForm(emptyForm); }} className="rounded-lg p-1.5 text-zinc-400 hover:bg-zinc-800 hover:text-white transition-colors">
                 <CloseIcon />
               </button>
             </div>
-            <form className="space-y-4 px-6 py-5" onSubmit={(e) => { e.preventDefault(); handleSave(); }}>
+            <form className="space-y-4 px-4 py-4 sm:px-6 sm:py-5" onSubmit={(e) => { e.preventDefault(); handleSave(); }}>
               <div>
                 <label className="mb-1.5 block text-sm font-medium text-zinc-300">Wallet Name</label>
                 <input type="text" value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} placeholder="e.g. Main Wallet" className={inputClassName} autoFocus />
@@ -164,7 +174,7 @@ export default function WalletsPage() {
               </div>
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => { setIsModalOpen(false); setForm(emptyForm); }} className="flex-1 rounded-xl border border-zinc-700 bg-zinc-800/50 px-4 py-2.5 text-sm font-medium text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors">Cancel</button>
-                <button type="submit" disabled={!form.name.trim() || !form.address.trim()} className="flex-1 rounded-xl bg-emerald-500 px-4 py-2.5 text-sm font-semibold text-zinc-950 shadow-lg shadow-emerald-500/20 hover:bg-emerald-400 disabled:opacity-40 disabled:cursor-not-allowed transition-all">Save Wallet</button>
+                <button type="submit" disabled={saving || !form.name.trim() || !form.address.trim()} className="flex-1 rounded-xl bg-emerald-500 px-4 py-2.5 text-sm font-semibold text-zinc-950 shadow-lg shadow-emerald-500/20 hover:bg-emerald-400 disabled:opacity-40 disabled:cursor-not-allowed transition-all">{saving ? "Saving..." : "Save Wallet"}</button>
               </div>
             </form>
           </div>
