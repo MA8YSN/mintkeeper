@@ -586,16 +586,18 @@ mint_currency: editForm.mint_currency || "ETH",
                     </div>
 
                     <dl className="mt-auto space-y-2 sm:space-y-3">
-                      <div className="flex flex-col gap-0.5 rounded-lg bg-zinc-800/40 px-3 py-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:py-2.5">
-                        <dt className="flex items-center gap-2 text-xs text-zinc-500 sm:text-sm"><CalendarIcon />Mint date</dt>
-                        <dd className="text-xs font-medium text-zinc-200 sm:text-sm">{formatMintDate(project.mint_date)}</dd>
-                      </div>
-                      <div className="flex flex-col gap-0.5 rounded-lg bg-zinc-800/40 px-3 py-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:py-2.5">
-                        <dt className="flex items-center gap-2 text-xs text-zinc-500 sm:text-sm"><ClockIcon />Days remaining</dt>
-                        <dd className="text-xs font-semibold tabular-nums text-emerald-400 sm:text-sm">
-                          {daysRemaining} <span className="font-normal text-zinc-500">days</span>
-                        </dd>
-                      </div>
+                      <div className="flex items-center justify-between gap-4 rounded-lg bg-zinc-800/40 px-3 py-2.5">
+  <dt className="flex items-center gap-2 text-sm text-zinc-500">
+    <CalendarIcon />
+    Mint Date
+  </dt>
+  <dd className="text-right">
+    <p className="text-sm font-medium text-zinc-200">{formatMintDate(project.mint_date)}</p>
+    <p className={`text-xs font-semibold tabular-nums ${daysRemaining === 0 ? "text-red-400" : "text-emerald-400"}`}>
+      {daysRemaining === 0 ? "Today" : `${daysRemaining} days left`}
+    </p>
+  </dd>
+</div>
                       {project.wallets && (
                         <div className="flex flex-col gap-0.5 rounded-lg bg-zinc-800/40 px-3 py-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:py-2.5">
                           <dt className="flex items-center gap-2 text-xs text-zinc-500 sm:text-sm"><WalletIcon />Wallet</dt>
@@ -607,16 +609,21 @@ mint_currency: editForm.mint_currency || "ETH",
     <dt className="text-sm text-zinc-500">Mint Price</dt>
     <dd className="flex items-center gap-2">
       <ChainBadge chain={(project.mint_currency ?? "ETH") as Chain} showLabel={false} size={16} />
-      <span className="text-sm font-semibold text-white">
-        {project.mint_price} {project.mint_currency}
-      </span>
+      <div className="text-right">
+        <p className="text-sm font-semibold text-white">{project.mint_price} {project.mint_currency}</p>
+        {cryptoPrices[project.mint_currency ?? ""] && (
+          <p className="text-xs text-emerald-400">
+            ≈ {getUsdValue(project.mint_price, project.mint_currency ?? "", cryptoPrices)} USD
+          </p>
+        )}
+      </div>
       <div className="pointer-events-none absolute bottom-full right-0 mb-2 hidden w-44 rounded-xl border border-zinc-700 bg-zinc-900 px-3 py-2.5 shadow-xl group-hover/price:block z-30">
         <p className="text-xs text-zinc-500 mb-1">Mint Price</p>
         <div className="flex items-center gap-2">
           <ChainBadge chain={(project.mint_currency ?? "ETH") as Chain} showLabel={false} size={18} />
           <span className="text-sm font-semibold text-white">{project.mint_price} {project.mint_currency}</span>
         </div>
-        {cryptoPrices[(project.mint_currency ?? "")] && (
+        {cryptoPrices[project.mint_currency ?? ""] && (
           <p className="mt-1 text-xs text-emerald-400">≈ {getUsdValue(project.mint_price, project.mint_currency ?? "", cryptoPrices)} USD</p>
         )}
       </div>
