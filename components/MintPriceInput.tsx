@@ -1,7 +1,23 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
-import { ChainBadge, CHAINS, CHAIN_LABELS, type Chain } from "./ChainBadge";
+import { createPortal } from "react-dom";
+import { ChainBadge } from "./ChainBadge";
 import { useCryptoPrices, getUsdValue } from "@/lib/useCryptoPrices";
+
+const CHAINS = [
+  { symbol: "ETH", label: "Ethereum" },
+  { symbol: "POL", label: "Polygon" },
+  { symbol: "BASE", label: "Base" },
+  { symbol: "ARB", label: "Arbitrum" },
+  { symbol: "OP", label: "Optimism" },
+  { symbol: "SOL", label: "Solana" },
+  { symbol: "BNB", label: "BNB Chain" },
+  { symbol: "AVAX", label: "Avalanche" },
+  { symbol: "ABS", label: "Abstract" },
+  { symbol: "APE", label: "ApeChain" },
+  { symbol: "SON", label: "Soneium" },
+  { symbol: "MON", label: "Monad" },
+];
 
 interface MintPriceInputProps {
   price: string;
@@ -12,12 +28,13 @@ interface MintPriceInputProps {
 
 export function MintPriceInput({ price, currency, onPriceChange, onCurrencyChange }: MintPriceInputProps) {
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, width: 0 });
+  const buttonRef = useRef<HTMLButtonElement>(null);
   const cryptoPrices = useCryptoPrices();
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
+      if (buttonRef.current && !buttonRef.current.contains(e.target as Node)) {
         setOpen(false);
       }
     };
@@ -25,9 +42,23 @@ export function MintPriceInput({ price, currency, onPriceChange, onCurrencyChang
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
+  const handleOpen = () => {
+    if (buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setDropdownPos({
+        top: rect.bottom + window.scrollY + 4,
+        left: rect.left + window.scrollX,
+        width: 208,
+      });
+    }
+    setOpen((o) => !o);
+  };
+
   const usd = price && cryptoPrices[currency]
     ? getUsdValue(parseFloat(price), currency, cryptoPrices)
     : null;
+
+  const selectedChain = CHAINS.find((c) => c.symbol === currency) ?? CHAINS[0];
 
   return (
     <div className="space-y-1.5">
@@ -42,48 +73,75 @@ export function MintPriceInput({ price, currency, onPriceChange, onCurrencyChang
           className="flex-1 bg-transparent px-4 py-3 text-sm text-white placeholder:text-zinc-500 focus:outline-none"
         />
 
-        <div className="relative" ref={ref}>
-          <button
-            type="button"
-            onClick={() => setOpen((o) => !o)}
-            className="flex h-full items-center gap-2 border-l border-zinc-700 bg-zinc-800 px-3 py-3 transition-colors hover:bg-zinc-700"
+        <button
+          ref={buttonRef}
+          type="button"
+          onClick={handleOpen}
+          className="flex h-full items-center gap-2 border-l border-zinc-700 bg-zinc-800 px-3 py-3 transition-colors hover:bg-zinc-700"
+        >
+          <ChainBadge chain={selectedChain.symbol} showLabel={true} size={18} />
+          <svg
+            className={`h-3 w-3 text-zinc-400 transition-transform ${open ? "rotate-180" : ""}`}
+            fill="none"
+            viewBox="0 0 24 24"
+            strokeWidth={2}
+            stroke="currentColor"
           >
-            <ChainBadge chain={currency as Chain} showLabel={true} size={18} />
-            <svg className={`h-3 w-3 text-zinc-400 transition-transform ${open ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="m19 9-7 7-7-7" />
-            </svg>
-          </button>
-
-          {open && (
-            <div className="absolute right-0 top-full z-50 mt-1 w-52 overflow-hidden rounded-xl border border-zinc-700 bg-zinc-900 shadow-2xl shadow-black/50">
-              {CHAINS.map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  onClick={() => { onCurrencyChange(c); setOpen(false); }}
-                  className={`flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-zinc-800 ${currency === c ? "bg-zinc-800" : ""}`}
-                >
-                  <ChainBadge chain={c} showLabel={false} size={22} />
-                  <div>
-                    <p className="text-sm font-medium text-white">{c}</p>
-                    <p className="text-xs text-zinc-500">{CHAIN_LABELS[c]}</p>
-                  </div>
-                  {currency === c && (
-                    <svg className="ml-auto h-4 w-4 text-emerald-400" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
-                    </svg>
-                  )}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+            <path strokeLinecap="round" strokeLinejoin="round" d="m19 9-7 7-7-7" />
+          </svg>
+        </button>
       </div>
 
       {usd && (
         <p className="px-1 text-xs text-zinc-500">
           ≈ <span className="text-emerald-400">{usd}</span> USD
         </p>
+      )}
+
+      {open && typeof document !== "undefined" && createPortal(
+        <div
+          style={{
+            position: "absolute",
+            top: dropdownPos.top,
+            left: dropdownPos.left,
+            width: dropdownPos.width,
+            zIndex: 9999,
+          }}
+          className="max-h-64 overflow-y-auto rounded-xl border border-zinc-700 bg-zinc-900 shadow-2xl shadow-black/50"
+        >
+          {CHAINS.map((c) => (
+            <button
+              key={c.symbol}
+              type="button"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                onCurrencyChange(c.symbol);
+                setOpen(false);
+              }}
+              className={`flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-zinc-800 ${
+                currency === c.symbol ? "bg-zinc-800/80" : ""
+              }`}
+            >
+              <ChainBadge chain={c.symbol} showLabel={false} size={22} />
+              <div>
+                <p className="text-sm font-medium text-white">{c.symbol}</p>
+                <p className="text-xs text-zinc-500">{c.label}</p>
+              </div>
+              {currency === c.symbol && (
+                <svg
+                  className="ml-auto h-4 w-4 shrink-0 text-emerald-400"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={2}
+                  stroke="currentColor"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                </svg>
+              )}
+            </button>
+          ))}
+        </div>,
+        document.body
       )}
     </div>
   );
