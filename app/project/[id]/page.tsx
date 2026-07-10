@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-
+import { useCryptoPrices, getUsdValue } from "@/lib/useCryptoPrices";
 type WlStatus = "FCFS" | "GTD";
 
 type Wallet = {
@@ -23,8 +23,10 @@ type Project = {
   notes: string | null;
   x_link: string | null;
   discord_link: string | null;
-  created_at: string;
-  wallets?: Wallet | null;
+mint_price: number | null;
+mint_currency: string | null;
+created_at: string;
+wallets?: Wallet | null;
 };
 
 const statusStyles = {
@@ -65,6 +67,10 @@ const [discordLink, setDiscordLink] = useState("");
 const [savingNotes, setSavingNotes] = useState(false);
 const [savingLinks, setSavingLinks] = useState(false);
 const [deleteConfirm, setDeleteConfirm] = useState(false);
+const [mintPrice, setMintPrice] = useState("");
+const [mintCurrency, setMintCurrency] = useState("ETH");
+const [savingMint, setSavingMint] = useState(false);
+const cryptoPrices = useCryptoPrices();
 
   useEffect(() => {
     const load = async () => {
@@ -79,6 +85,9 @@ const [deleteConfirm, setDeleteConfirm] = useState(false);
   setNotes(cleanOptionalText(data.notes));
   setXLink(cleanOptionalText(data.x_link));
   setDiscordLink(cleanOptionalText(data.discord_link));
+  setMintPrice(data.mint_price?.toString() || "");
+  setMintCurrency(data.mint_currency || "ETH");
+  
 }
       setLoading(false);
     };
@@ -110,6 +119,23 @@ const handleSaveLinks = async () => {
     setProject((p) => p ? { ...p, x_link: cleanXLink || null, discord_link: cleanDiscordLink || null } : p);
   }
   setSavingLinks(false);
+};
+const handleSaveMint = async () => {
+  if (!project) return;
+  setSavingMint(true);
+  const { error } = await supabase.from("projects").update({
+    mint_price: mintPrice ? parseFloat(mintPrice) : null,
+    mint_currency: mintCurrency,
+    
+  }).eq("id", project.id);
+  if (error) console.error("Mint error:", error.message);
+  else setProject((p) => p ? {
+    ...p,
+    mint_price: mintPrice ? parseFloat(mintPrice) : null,
+    mint_currency: mintCurrency,
+    
+  } : p);
+  setSavingMint(false);
 };
   const handleMarkAsMinted = async () => {
     if (!project) return;
@@ -263,7 +289,46 @@ const handleSaveLinks = async () => {
     </div>
   </div>
 </div>
-        
+       <div className="mb-8">
+  <h2 className="mb-3 text-sm font-medium uppercase tracking-wider text-zinc-500">Mint Price</h2>
+  <div className="space-y-3">
+    <div className="flex overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900/50 focus-within:border-emerald-500/50 focus-within:ring-2 focus-within:ring-emerald-500/20 transition-all">
+      <input
+        type="number"
+        step="any"
+        min="0"
+        value={mintPrice}
+        onChange={(e) => setMintPrice(e.target.value)}
+        placeholder="0.00"
+        className="flex-1 bg-transparent px-4 py-3 text-sm text-white placeholder:text-zinc-600 focus:outline-none"
+      />
+      <select
+        value={mintCurrency}
+        onChange={(e) => setMintCurrency(e.target.value)}
+        className="border-l border-zinc-800 bg-zinc-900 px-3 py-3 text-sm text-white focus:outline-none cursor-pointer"
+      >
+        {["ETH", "SOL", "POL", "BTC", "BNB", "AVAX", "SUI", "APE"].map((c) => (
+          <option key={c} value={c}>{c}</option>
+        ))}
+      </select>
+    </div>
+
+    {mintPrice && cryptoPrices[mintCurrency] && (
+      <p className="text-xs text-zinc-500">
+        ≈ <span className="text-emerald-400">{getUsdValue(parseFloat(mintPrice), mintCurrency, cryptoPrices)}</span> USD
+      </p>
+    )}
+
+    <button
+      type="button"
+      onClick={handleSaveMint}
+      disabled={savingMint}
+      className="rounded-lg bg-zinc-800 px-4 py-2 text-sm font-medium text-zinc-300 transition-colors hover:bg-zinc-700 hover:text-white disabled:opacity-40"
+    >
+      {savingMint ? "Saving..." : "Save Mint Price"}
+    </button>
+  </div>
+</div>
 
         <div className="mb-8">
           <h2 className="mb-3 text-sm font-medium uppercase tracking-wider text-zinc-500">Notes</h2>
