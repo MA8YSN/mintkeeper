@@ -4,6 +4,8 @@ import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCryptoPrices, getUsdValue } from "@/lib/useCryptoPrices";
+import { MintPriceInput } from "@/components/MintPriceInput";
+import { ChainBadge, type Chain } from "@/components/ChainBadge";
 
 type WlStatus = "FCFS" | "GTD";
 type WlStatusColor = "emerald" | "amber";
@@ -603,18 +605,21 @@ mint_currency: editForm.mint_currency || "ETH",
                       {project.mint_price && (
   <div className="group/price relative flex items-center justify-between gap-4 rounded-lg bg-zinc-800/40 px-3 py-2.5">
     <dt className="text-sm text-zinc-500">Mint Price</dt>
-    <dd className="flex items-center gap-1.5">
-      <span className="text-xs text-zinc-500">◇</span>
+    <dd className="flex items-center gap-2">
+      <ChainBadge chain={(project.mint_currency ?? "ETH") as Chain} showLabel={false} size={16} />
       <span className="text-sm font-semibold text-white">
         {project.mint_price} {project.mint_currency}
       </span>
-      {cryptoPrices[project.mint_currency ?? ""] && (
-        <div className="pointer-events-none absolute bottom-full right-0 mb-2 hidden w-max rounded-xl border border-zinc-700 bg-zinc-900 px-3 py-2 shadow-xl group-hover/price:block z-30">
-          <p className="text-xs text-zinc-400">Mint Price</p>
-          <p className="text-sm font-semibold text-white">{project.mint_price} {project.mint_currency}</p>
-          <p className="text-xs text-emerald-400">≈ {getUsdValue(project.mint_price, project.mint_currency ?? "", cryptoPrices)} USD</p>
+      <div className="pointer-events-none absolute bottom-full right-0 mb-2 hidden w-44 rounded-xl border border-zinc-700 bg-zinc-900 px-3 py-2.5 shadow-xl group-hover/price:block z-30">
+        <p className="text-xs text-zinc-500 mb-1">Mint Price</p>
+        <div className="flex items-center gap-2">
+          <ChainBadge chain={(project.mint_currency ?? "ETH") as Chain} showLabel={false} size={18} />
+          <span className="text-sm font-semibold text-white">{project.mint_price} {project.mint_currency}</span>
         </div>
-      )}
+        {cryptoPrices[(project.mint_currency ?? "")] && (
+          <p className="mt-1 text-xs text-emerald-400">≈ {getUsdValue(project.mint_price, project.mint_currency ?? "", cryptoPrices)} USD</p>
+        )}
+      </div>
     </dd>
   </div>
 )}
@@ -732,26 +737,12 @@ mint_currency: editForm.mint_currency || "ETH",
               
               <div>
   <label className="mb-1.5 block text-sm font-medium text-zinc-300">Mint Price <span className="text-zinc-600">(optional)</span></label>
-  <div className="flex overflow-hidden rounded-lg border border-zinc-700 bg-zinc-800/60 focus-within:border-emerald-500/50 focus-within:ring-2 focus-within:ring-emerald-500/20 transition-all">
-    <input
-      type="number"
-      step="any"
-      min="0"
-      value={editForm.mint_price}
-      onChange={(e) => setEditForm((p) => ({ ...p, mint_price: e.target.value }))}
-      placeholder="0.00"
-      className="flex-1 bg-transparent px-3.5 py-2.5 text-sm text-white placeholder:text-zinc-500 focus:outline-none"
-    />
-    <select
-      value={editForm.mint_currency}
-      onChange={(e) => setEditForm((p) => ({ ...p, mint_currency: e.target.value }))}
-      className="border-l border-zinc-700 bg-zinc-800 px-3 py-2.5 text-sm text-white focus:outline-none cursor-pointer"
-    >
-      {["ETH", "SOL", "POL", "BTC", "BNB", "AVAX", "SUI", "APE"].map((c) => (
-        <option key={c} value={c}>{c}</option>
-      ))}
-    </select>
-  </div>
+  <MintPriceInput
+    price={form.mint_price}
+    currency={form.mint_currency}
+    onPriceChange={(v) => setForm((p) => ({ ...p, mint_price: v }))}
+    onCurrencyChange={(v) => setForm((p) => ({ ...p, mint_currency: v }))}
+  />
 </div>
 
 
@@ -828,6 +819,15 @@ mint_currency: editForm.mint_currency || "ETH",
                   {wallets.map((w) => (<option key={w.id} value={w.id}>{w.name} — {w.address.slice(0, 6)}...{w.address.slice(-4)}</option>))}
                 </select>
               </div>
+              <div>
+  <label className="mb-1.5 block text-sm font-medium text-zinc-300">Mint Price <span className="text-zinc-600">(optional)</span></label>
+  <MintPriceInput
+    price={editForm.mint_price}
+    currency={editForm.mint_currency}
+    onPriceChange={(v) => setEditForm((p) => ({ ...p, mint_price: v }))}
+    onCurrencyChange={(v) => setEditForm((p) => ({ ...p, mint_currency: v }))}
+  />
+</div>
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={closeEditModal} className="flex-1 rounded-xl border border-zinc-700 bg-zinc-800/50 px-4 py-2.5 text-sm font-medium text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors">Cancel</button>
                 <button type="submit" disabled={editUploading || !editForm.name.trim() || !editForm.mint_date.match(/^\d{4}-\d{2}-\d{2}$/)} className="flex-1 rounded-xl bg-emerald-500 px-4 py-2.5 text-sm font-semibold text-zinc-950 shadow-lg shadow-emerald-500/20 hover:bg-emerald-400 disabled:opacity-40 disabled:cursor-not-allowed transition-all">
