@@ -19,7 +19,7 @@ type UserProfile = {
   email: string;
   id: string;
 };
-
+ 
 const PROVIDERS = [
   {
     key: "twitter",
