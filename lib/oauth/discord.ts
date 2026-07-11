@@ -9,4 +9,4 @@ export async function connectDiscord() {
     },
   });
   if (error) console.error("Discord OAuth error:", error.message);
-}
+} 
