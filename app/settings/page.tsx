@@ -99,7 +99,7 @@ export default function SettingsPage() {
         <div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-700 border-t-emerald-400" />
       </div>
     );
-  }
+  } 
 
   return (
     <div className="relative min-h-screen bg-zinc-950">
