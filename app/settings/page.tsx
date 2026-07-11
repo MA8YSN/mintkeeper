@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { connectTwitter } from "@/lib/oauth/twitter";
+import { connectDiscord } from "@/lib/oauth/discord";
 
 type ConnectedAccount = {
   id: string;
@@ -68,15 +70,9 @@ export default function SettingsPage() {
   }, []);
 
   const handleConnect = async (provider: "twitter" | "discord") => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider,
-      options: {
-        redirectTo: `${window.location.origin}/settings/callback?provider=${provider}`,
-        scopes: provider === "discord" ? "identify" : undefined,
-      },
-    });
-    if (error) console.error("OAuth error:", error.message);
-  };
+  if (provider === "twitter") await connectTwitter();
+  if (provider === "discord") await connectDiscord();
+};
 
   const handleDisconnect = async (provider: string) => {
     setDisconnecting(provider);
