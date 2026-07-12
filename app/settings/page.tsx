@@ -30,7 +30,6 @@ const PROVIDERS = [
       </svg>
     ),
     color: "text-white",
-    bg: "bg-zinc-900 border-zinc-700",
   },
   {
     key: "discord",
@@ -41,7 +40,6 @@ const PROVIDERS = [
       </svg>
     ),
     color: "text-indigo-400",
-    bg: "bg-zinc-900 border-zinc-700",
   },
 ];
 
@@ -70,17 +68,13 @@ export default function SettingsPage() {
   }, []);
 
   const handleConnect = async (provider: "twitter" | "discord") => {
-  try {
-    if (provider === "twitter") await connectTwitter();
-    if (provider === "discord") await connectDiscord();
-  } catch (err: any) {
-    if (err.message?.includes("already linked")) {
-      alert("This account is already linked to another MintKeeper account.");
-    } else {
+    try {
+      if (provider === "twitter") await connectTwitter();
+      if (provider === "discord") await connectDiscord();
+    } catch (err: any) {
       alert(`Failed to connect ${provider}: ${err.message}`);
     }
-  }
-};
+  };
 
   const handleDisconnect = async (provider: string) => {
     setDisconnecting(provider);
@@ -121,7 +115,7 @@ export default function SettingsPage() {
 
         <h1 className="mb-8 text-3xl font-bold text-white">Settings</h1>
 
-        {/* Account Info */}
+        {/* Account */}
         <section className="mb-8 rounded-2xl border border-zinc-800 bg-zinc-900/50 p-6">
           <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-zinc-500">Account</h2>
           <div className="flex items-center justify-between">
@@ -187,7 +181,10 @@ export default function SettingsPage() {
                   ) : (
                     <button
                       type="button"
-                      onClick={() => handleConnect(provider.key as "twitter" | "discord")}
+                      onClick={() => {
+                        if (provider.key === "twitter") handleConnect("twitter");
+                        if (provider.key === "discord") handleConnect("discord");
+                      }}
                       className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-3 py-1.5 text-xs font-medium text-emerald-400 transition-colors hover:bg-emerald-500/10"
                     >
                       Connect
