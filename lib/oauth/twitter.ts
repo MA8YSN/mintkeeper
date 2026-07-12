@@ -1,7 +1,7 @@
 import { supabase } from "@/lib/supabase";
 
 export async function connectTwitter() {
-  const { error } = await supabase.auth.signInWithOAuth({
+  const { error } = await supabase.auth.linkIdentity({
     provider: "twitter",
     options: {
       redirectTo: `${window.location.origin}/settings/callback?provider=twitter`,
