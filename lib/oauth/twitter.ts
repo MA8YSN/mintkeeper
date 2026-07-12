@@ -1,11 +1,14 @@
 import { supabase } from "@/lib/supabase";
 
 export async function connectTwitter() {
-  const { error } = await supabase.auth.signInWithOAuth({
+  const { error } = await supabase.auth.linkIdentity({
     provider: "twitter",
     options: {
       redirectTo: `${window.location.origin}/settings/callback?provider=twitter`,
     },
   });
-  if (error) console.error("Twitter OAuth error:", error.message);
+  if (error) {
+    console.error("Twitter link error:", error.message);
+    throw error;
+  }
 }
