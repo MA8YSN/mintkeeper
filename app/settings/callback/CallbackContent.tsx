@@ -11,8 +11,12 @@ export default function CallbackContent() {
 
   useEffect(() => {
     const run = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) { router.push("/login"); return; }
+      const { data: { session }, error } = await supabase.auth.getSession();
+
+      if (error || !session) {
+        router.push("/login");
+        return;
+      }
 
       if (provider) {
         await handleOAuthCallback(session.user, provider);
