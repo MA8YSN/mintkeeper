@@ -2,7 +2,6 @@
 import { useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { handleOAuthCallback } from "@/lib/oauth/handleCallback";
 
 export default function CallbackContent() {
   const router = useRouter();
@@ -11,15 +10,27 @@ export default function CallbackContent() {
 
   useEffect(() => {
     const run = async () => {
-      const { data: { session }, error } = await supabase.auth.getSession();
+      const { data: { session } } = await supabase.auth.getSession();
 
-      if (error || !session) {
+      if (!session) {
         router.push("/login");
         return;
       }
 
-      if (provider) {
-        await handleOAuthCallback(session.user, provider);
+      const user = session.user;
+      const identity = user.identities?.find((i) => i.provider === provider);
+
+      if (identity && provider) {
+        const d = identity.identity_data ?? {};
+        await supabase.from("connected_accounts").upsert({
+          user_id: user.id,
+          provider,
+          provider_user_id: identity.id,
+          username: d.user_name ?? d.username ?? d.preferred_username ?? null,
+          display_name: d.full_name ?? d.name ?? null,
+          avatar_url: d.avatar_url ?? null,
+          connected_at: new Date().toISOString(),
+        }, { onConflict: "user_id,provider" });
       }
 
       router.push("/settings");
