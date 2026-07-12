@@ -1,11 +1,14 @@
 import { supabase } from "@/lib/supabase";
 
 export async function connectDiscord() {
-  const { error } = await supabase.auth.linkIdentity({
+  const { error } = await supabase.auth.signInWithOAuth({
     provider: "discord",
     options: {
       redirectTo: `${window.location.origin}/settings/callback?provider=discord`,
-      scopes: "identify",
+      scopes: "identify email",
+      queryParams: {
+        prompt: "consent",
+      },
     },
   });
   if (error) {
