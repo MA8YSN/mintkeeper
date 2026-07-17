@@ -214,7 +214,9 @@ export default function Home() {
     const searchableProjectText = [
       p.name,
       cleanOptionalText(p.x_link),
-      p.wallets?.name,
+     p.project_wallets
+  ?.map((pw) => pw.wallets.name)
+  .join(" "),
       cleanOptionalText(p.notes),
       cleanOptionalText(p.discord_link),
       cleanOptionalText(p.x_link) ? "x twitter" : "",
@@ -350,7 +352,7 @@ export default function Home() {
       name: project.name,
       wl_status: project.wl_status,
       mint_date: project.mint_date,
-      wallet_ids: editProject.project_wallets?.map((pw) => pw.wallet_id) ?? [],
+      wallet_ids: project.project_wallets?.map((pw) => pw.wallet_id) ?? [],
 image: null,
 mint_price: project.mint_price?.toString() || "",
 mint_currency: project.mint_currency || "ETH",
