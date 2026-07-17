@@ -96,11 +96,17 @@ function formatMintDate(isoDate: string): string {
 
 function getDaysRemaining(isoDate: string): number {
   if (!isoDate) return 0;
+
   const today = new Date();
   today.setHours(0, 0, 0, 0);
+
   const [year, month, day] = isoDate.split("-").map(Number);
   const mint = new Date(year, month - 1, day);
-  return Math.max(0, Math.ceil((mint.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)));
+
+  return Math.ceil(
+    (mint.getTime() - today.getTime()) /
+      (1000 * 60 * 60 * 24)
+  );
 }
 
 function normalizeSearchText(value: string | null | undefined): string {
@@ -635,9 +641,21 @@ mint_currency: project.mint_currency || "ETH",
   </dt>
   <dd className="text-right">
     <p className="text-sm font-medium text-zinc-200">{formatMintDate(project.mint_date)}</p>
-    <p className={`text-xs font-semibold tabular-nums ${daysRemaining === 0 ? "text-red-400" : "text-emerald-400"}`}>
-      {daysRemaining === 0 ? "Today" : `${daysRemaining} days left`}
-    </p>
+    <p
+  className={`text-xs font-semibold tabular-nums ${
+    daysRemaining > 0
+      ? "text-emerald-400"
+      : daysRemaining === 0
+      ? "text-amber-400"
+      : "text-red-400"
+  }`}
+>
+  {daysRemaining > 0
+    ? `${daysRemaining} day${daysRemaining === 1 ? "" : "s"} left`
+    : daysRemaining === 0
+    ? "Today"
+    : "Mint Passed"}
+</p>
   </dd>
 </div>
                       {project.project_wallets &&
