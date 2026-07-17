@@ -2,10 +2,11 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useCryptoPrices, getUsdValue } from "@/lib/useCryptoPrices";
 import { MintPriceInput } from "@/components/MintPriceInput";
 import { ChainBadge, type Chain } from "@/components/ChainBadge";
+import { useUser, useClerk } from "@clerk/nextjs";
+
 
 type WlStatus = "FCFS" | "GTD";
 type WlStatusColor = "emerald" | "amber";
@@ -30,18 +31,28 @@ type Project = {
   discord_link: string | null;
 mint_price: number | null;
 mint_currency: string | null;
-wallets?: Wallet | null;
+project_wallets?: ProjectWallet[];
+
 };
 
 type FormState = {
   name: string;
   wl_status: WlStatus;
   mint_date: string;
-  wallet_id: string;
+  wallet_ids: string[];
   image: File | null;
   mint_price: string;
   mint_currency: string;
   
+};
+
+type ProjectWallet = {
+  wallet_id: string;
+  wallets: {
+    id: string;
+    name: string;
+    blockchain: string;
+  };
 };
 
 const WL_STATUS_OPTIONS: WlStatus[] = ["FCFS", "GTD"];
@@ -61,7 +72,7 @@ const emptyForm: FormState = {
   name: "",
   wl_status: "FCFS",
   mint_date: "",
-  wallet_id: "",
+ wallet_ids: [],
   image: null,
   mint_price: "",
   mint_currency: "ETH",
@@ -162,7 +173,9 @@ function WalletIcon() {
 
 export default function Home() {
   
-  const router = useRouter();
+  const { user, isLoaded } = useUser();
+  const { signOut } = useClerk();
+
   const [search, setSearch] = useState("");
   const [projects, setProjects] = useState<Project[]>([]);
   const [wallets, setWallets] = useState<Wallet[]>([]);
@@ -178,33 +191,22 @@ export default function Home() {
   const [editUploading, setEditUploading] = useState(false);
   const [duplicatingProjectId, setDuplicatingProjectId] = useState<string | null>(null);
   const cryptoPrices = useCryptoPrices();
-  useEffect(() => {
-    const checkAuth = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        router.push("/login");
-      }
-    };
-    checkAuth();
-  }, [router]);
+ 
+ const handleLogout = () => signOut({ redirectUrl: "/sign-in" });
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    router.push("/login");
-  };
+  
   useEffect(() => {
-    const load = async () => {
-      const [{ data: projectsData, error: projectsError }, { data: walletsData, error: walletsError }] = await Promise.all([
-        supabase.from("projects").select("*, wallets(id, name, address)").order("mint_date", { ascending: true }),
-        supabase.from("wallets").select("*").order("created_at", { ascending: false }),
-      ]);
-      if (projectsError) console.error("Projects error:", projectsError.message);
-      if (walletsError) console.error("Wallets error:", walletsError.message);
-      if (projectsData) setProjects(projectsData);
-      if (walletsData) setWallets(walletsData);
-    };
-    load();
-  }, []);
+  if (!isLoaded || !user) return;
+  const load = async () => {
+    const [{ data: projectsData }, { data: walletsData }] = await Promise.all([
+      supabase.from("projects").select("*, project_wallets(wallet_id, wallets(id, name, blockchain))").eq("user_id", user.id).order("mint_date", { ascending: true }),
+      supabase.from("wallets").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
+    ]);
+    if (projectsData) setProjects(projectsData);
+    if (walletsData) setWallets(walletsData);
+  };
+  load();
+}, [isLoaded, user]);
 
   const filteredProjects = projects.filter((p) => {
     const matchesFilter = filter === "active" ? !p.minted : filter === "minted" ? p.minted : true;
@@ -245,54 +247,68 @@ export default function Home() {
   };
 
   const handleSave = async () => {
-    if (!form.name.trim() || !form.mint_date.match(/^\d{4}-\d{2}-\d{2}$/)) return;
-    setUploading(true);
+  if (!form.name.trim() || !form.mint_date.match(/^\d{4}-\d{2}-\d{2}$/) || !user) return;
+  setUploading(true);
 
-    let image_url: string | null = null;
+  let image_url: string | null = null;
 
-    if (form.image) {
-      const ext = form.image.name.split(".").pop();
-      const fileName = `${crypto.randomUUID()}.${ext}`;
-      const { error: uploadError } = await supabase.storage
-        .from("project-images")
-        .upload(fileName, form.image);
+  if (form.image) {
+    const ext = form.image.name.split(".").pop();
+    const fileName = `${crypto.randomUUID()}.${ext}`;
+    const { error: uploadError } = await supabase.storage
+      .from("project-images")
+      .upload(fileName, form.image);
 
-      if (uploadError) {
-        console.error("Upload error:", uploadError.message);
-        setUploading(false);
-        return;
-      }
-
-      const { data: urlData } = supabase.storage
-        .from("project-images")
-        .getPublicUrl(fileName);
-
-      image_url = urlData.publicUrl;
+    if (uploadError) {
+      console.error("Upload error:", uploadError.message);
+      setUploading(false);
+      return;
     }
 
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: urlData } = supabase.storage
+      .from("project-images")
+      .getPublicUrl(fileName);
 
-const { data, error } = await supabase
-  .from("projects")
-  .insert([{
-    name: form.name.trim(),
-    wl_status: form.wl_status,
-    mint_date: form.mint_date,
-    wallet_id: form.wallet_id || null,
-    minted: false,
-image_url,
-user_id: user?.id,
-mint_price: form.mint_price ? parseFloat(form.mint_price) : null,
-mint_currency: form.mint_currency || "ETH",
-  }])
-      .select("*, wallets(id, name, address)")
-      .single();
+    image_url = urlData.publicUrl;
+  }
 
-    setUploading(false);
-    if (error) { console.error("Insert error:", error.message); return; }
-    if (data) setProjects((prev) => [data, ...prev]);
-    closeModal();
-  };
+  const { data, error } = await supabase
+    .from("projects")
+    .insert([{
+      name: form.name.trim(),
+      wl_status: form.wl_status,
+      mint_date: form.mint_date,
+      minted: false,
+      image_url,
+      mint_price: form.mint_price ? parseFloat(form.mint_price) : null,
+      mint_currency: form.mint_currency || "ETH",
+      user_id: user.id,
+    }])
+    .select("id")
+    .single();
+
+  if (error) { console.error("Insert error:", error.message); setUploading(false); return; }
+
+  if (data && form.wallet_ids.length > 0) {
+    await supabase.from("project_wallets").insert(
+      form.wallet_ids.map((wallet_id) => ({
+        project_id: data.id,
+        wallet_id,
+        user_id: user.id,
+      }))
+    );
+  }
+
+  const { data: fullProject } = await supabase
+    .from("projects")
+    .select("*, project_wallets(wallet_id, wallets(id, name, blockchain))")
+    .eq("id", data.id)
+    .single();
+
+  setUploading(false);
+  if (fullProject) setProjects((prev) => [fullProject, ...prev]);
+  closeModal();
+};
 
   const handleConfirmDelete = async () => {
     if (!deleteTargetId) return;
@@ -334,7 +350,7 @@ mint_currency: form.mint_currency || "ETH",
       name: project.name,
       wl_status: project.wl_status,
       mint_date: project.mint_date,
-      wallet_id: project.wallet_id || "",
+      wallet_ids: editProject.project_wallets?.map((pw) => pw.wallet_id) ?? [],
 image: null,
 mint_price: project.mint_price?.toString() || "",
 mint_currency: project.mint_currency || "ETH",
@@ -349,51 +365,67 @@ mint_currency: project.mint_currency || "ETH",
   };
 
   const handleEditSave = async () => {
-    if (!editProject || !editForm.name.trim() || !editForm.mint_date.match(/^\d{4}-\d{2}-\d{2}$/)) return;
-    setEditUploading(true);
+  if (!editProject || !editForm.name.trim() || !editForm.mint_date.match(/^\d{4}-\d{2}-\d{2}$/) || !user) return;
+  setEditUploading(true);
 
-    let image_url = editProject.image_url;
+  let image_url = editProject.image_url;
 
-    if (editForm.image) {
-      const ext = editForm.image.name.split(".").pop();
-      const fileName = `${crypto.randomUUID()}.${ext}`;
-      const { error: uploadError } = await supabase.storage
-        .from("project-images")
-        .upload(fileName, editForm.image);
+  if (editForm.image) {
+    const ext = editForm.image.name.split(".").pop();
+    const fileName = `${crypto.randomUUID()}.${ext}`;
+    const { error: uploadError } = await supabase.storage
+      .from("project-images")
+      .upload(fileName, editForm.image);
 
-      if (uploadError) {
-        console.error("Upload error:", uploadError.message);
-        setEditUploading(false);
-        return;
-      }
-
-      const { data: urlData } = supabase.storage
-        .from("project-images")
-        .getPublicUrl(fileName);
-
-      image_url = urlData.publicUrl;
+    if (uploadError) {
+      console.error("Upload error:", uploadError.message);
+      setEditUploading(false);
+      return;
     }
 
-    const { data, error } = await supabase
-      .from("projects")
-      .update({
-        name: editForm.name.trim(),
-        wl_status: editForm.wl_status,
-        mint_date: editForm.mint_date,
-wallet_id: editForm.wallet_id || null,
-image_url,
-mint_price: editForm.mint_price ? parseFloat(editForm.mint_price) : null,
-mint_currency: editForm.mint_currency || "ETH",
-      })
-      .eq("id", editProject.id)
-      .select("*, wallets(id, name, address)")
-      .single();
+    const { data: urlData } = supabase.storage
+      .from("project-images")
+      .getPublicUrl(fileName);
 
-    setEditUploading(false);
-    if (error) { console.error("Update error:", error.message); return; }
-    if (data) setProjects((prev) => prev.map((p) => (p.id === editProject.id ? data : p)));
-    closeEditModal();
-  };
+    image_url = urlData.publicUrl;
+  }
+
+  const { error } = await supabase
+    .from("projects")
+    .update({
+      name: editForm.name.trim(),
+      wl_status: editForm.wl_status,
+      mint_date: editForm.mint_date,
+      image_url,
+      mint_price: editForm.mint_price ? parseFloat(editForm.mint_price) : null,
+      mint_currency: editForm.mint_currency || "ETH",
+    })
+    .eq("id", editProject.id);
+
+  if (error) { console.error("Update error:", error.message); setEditUploading(false); return; }
+
+  await supabase.from("project_wallets").delete().eq("project_id", editProject.id);
+
+  if (editForm.wallet_ids.length > 0) {
+    await supabase.from("project_wallets").insert(
+      editForm.wallet_ids.map((wallet_id) => ({
+        project_id: editProject.id,
+        wallet_id,
+        user_id: user.id,
+      }))
+    );
+  }
+
+  const { data: fullProject } = await supabase
+    .from("projects")
+    .select("*, project_wallets(wallet_id, wallets(id, name, blockchain))")
+    .eq("id", editProject.id)
+    .single();
+
+  setEditUploading(false);
+  if (fullProject) setProjects((prev) => prev.map((p) => p.id === editProject.id ? fullProject : p));
+  closeEditModal();
+};
 
   const handleMarkAsMinted = async (id: string) => {
     const project = projects.find((p) => p.id === id);
@@ -445,20 +477,13 @@ mint_currency: editForm.mint_currency || "ETH",
   <WalletIcon />
   Wallets
 </Link>
-<Link href="/settings" className="inline-flex items-center gap-2 rounded-xl border border-zinc-700 bg-zinc-800/50 px-4 py-2.5 text-sm font-medium text-zinc-300 transition-colors hover:border-zinc-600 hover:bg-zinc-800 hover:text-white">
+<Link href="/profile" className="inline-flex items-center gap-2 rounded-xl border border-zinc-700 bg-zinc-800/50 px-4 py-2.5 text-sm font-medium text-zinc-300 transition-colors hover:border-zinc-600 hover:bg-zinc-800 hover:text-white">
   <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z" />
-    <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M17.982 18.725A7.488 7.488 0 0 0 12 15.75a7.488 7.488 0 0 0-5.982 2.975m11.963 0a9 9 0 1 0-11.963 0m11.963 0A8.966 8.966 0 0 1 12 21a8.966 8.966 0 0 1-5.982-2.275M15 9.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
   </svg>
-  Settings
+  Profile
 </Link>
-            <button
-  type="button"
-  onClick={handleLogout}
-  className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-zinc-700 bg-zinc-800/50 px-3 py-2.5 text-sm font-medium text-zinc-300 transition-colors hover:border-zinc-600 hover:bg-zinc-800 hover:text-white min-[400px]:flex-none min-[400px]:px-4"
->
-  Sign Out
-</button>
+        
             <button
               type="button"
               onClick={openModal}
@@ -469,6 +494,13 @@ mint_currency: editForm.mint_currency || "ETH",
               <span className="hidden sm:inline">Add Project</span>
             </button>
           </div>
+          <button
+  type="button"
+  onClick={() => signOut({ redirectUrl: "/sign-in" })}
+  className="inline-flex items-center gap-2 rounded-xl border border-zinc-700 bg-zinc-800/50 px-4 py-2.5 text-sm font-medium text-zinc-300 transition-colors hover:border-zinc-600 hover:bg-zinc-800 hover:text-white"
+>
+  Sign Out
+</button>
         </header>
 
         <div className="mt-6 grid grid-cols-2 gap-2 sm:mt-8 sm:gap-3 sm:grid-cols-3 md:grid-cols-5">
@@ -605,12 +637,21 @@ mint_currency: editForm.mint_currency || "ETH",
     </p>
   </dd>
 </div>
-                      {project.wallets && (
-                        <div className="flex flex-col gap-0.5 rounded-lg bg-zinc-800/40 px-3 py-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:py-2.5">
-                          <dt className="flex items-center gap-2 text-xs text-zinc-500 sm:text-sm"><WalletIcon />Wallet</dt>
-                          <dd className="truncate text-xs font-medium text-zinc-200 sm:text-sm">{project.wallets.name}</dd>
-                        </div>
-                      )}
+                      {project.project_wallets &&
+  project.project_wallets.length > 0 && (
+    <div className="flex flex-wrap gap-1.5 pt-1">
+      {project.project_wallets.map((pw) => (
+        <span
+          key={pw.wallet_id}
+          className="inline-flex items-center gap-1 rounded-full border border-zinc-700 bg-zinc-800/60 px-2 py-0.5 text-xs text-zinc-300"
+        >
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+
+          {pw.wallets.name}
+        </span>
+      ))}
+    </div>
+)}
                       {project.mint_price && (
   <div className="group/price relative flex items-center justify-between gap-4 rounded-lg bg-zinc-800/40 px-3 py-2.5">
     <dt className="text-sm text-zinc-500">Mint Price</dt>
@@ -741,13 +782,35 @@ mint_currency: editForm.mint_currency || "ETH",
                   </select>
                 </div>
               </div>
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-zinc-300">Wallet <span className="text-zinc-600">(optional)</span></label>
-                <select value={form.wallet_id} onChange={(e) => setForm((p) => ({ ...p, wallet_id: e.target.value }))} className={`${inputClassName} cursor-pointer`}>
-                  <option value="">No wallet</option>
-                  {wallets.map((w) => (<option key={w.id} value={w.id}>{w.name} — {w.address.slice(0, 6)}...{w.address.slice(-4)}</option>))}
-                </select>
-              </div>
+             <div>
+  <label className="mb-1.5 block text-sm font-medium text-zinc-300">Wallets <span className="text-zinc-600">(optional)</span></label>
+  {wallets.length === 0 ? (
+    <p className="text-xs text-zinc-600">No wallets saved. <Link href="/wallets" className="text-emerald-400 hover:text-emerald-300">Add one</Link></p>
+  ) : (
+    <div className="space-y-2 rounded-lg border border-zinc-700 bg-zinc-800/40 p-3">
+      {wallets.map((w) => (
+        <label key={w.id} className="flex items-center gap-3 cursor-pointer group">
+          <input
+            type="checkbox"
+            checked={form.wallet_ids.includes(w.id)}
+            onChange={(e) => {
+              if (e.target.checked) {
+                setForm((p) => ({ ...p, wallet_ids: [...p.wallet_ids, w.id] }));
+              } else {
+                setForm((p) => ({ ...p, wallet_ids: p.wallet_ids.filter((id) => id !== w.id) }));
+              }
+            }}
+            className="h-4 w-4 rounded border-zinc-600 bg-zinc-700 text-emerald-500 focus:ring-emerald-500/20"
+          />
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-zinc-300 group-hover:text-white transition-colors">{w.name}</span>
+            <span className="text-xs text-zinc-600">{w.blockchain}</span>
+          </div>
+        </label>
+      ))}
+    </div>
+  )}
+</div>
               
               <div>
   <label className="mb-1.5 block text-sm font-medium text-zinc-300">Mint Price <span className="text-zinc-600">(optional)</span></label>
@@ -827,12 +890,34 @@ mint_currency: editForm.mint_currency || "ETH",
                 </div>
               </div>
               <div>
-                <label className="mb-1.5 block text-sm font-medium text-zinc-300">Wallet <span className="text-zinc-600">(optional)</span></label>
-                <select value={editForm.wallet_id} onChange={(e) => setEditForm((p) => ({ ...p, wallet_id: e.target.value }))} className={`${inputClassName} cursor-pointer`}>
-                  <option value="">No wallet</option>
-                  {wallets.map((w) => (<option key={w.id} value={w.id}>{w.name} — {w.address.slice(0, 6)}...{w.address.slice(-4)}</option>))}
-                </select>
-              </div>
+  <label className="mb-1.5 block text-sm font-medium text-zinc-300">Wallets <span className="text-zinc-600">(optional)</span></label>
+  {wallets.length === 0 ? (
+    <p className="text-xs text-zinc-600">No wallets saved.</p>
+  ) : (
+    <div className="space-y-2 rounded-lg border border-zinc-700 bg-zinc-800/40 p-3">
+      {wallets.map((w) => (
+        <label key={w.id} className="flex items-center gap-3 cursor-pointer group">
+          <input
+            type="checkbox"
+            checked={editForm.wallet_ids.includes(w.id)}
+            onChange={(e) => {
+              if (e.target.checked) {
+                setEditForm((p) => ({ ...p, wallet_ids: [...p.wallet_ids, w.id] }));
+              } else {
+                setEditForm((p) => ({ ...p, wallet_ids: p.wallet_ids.filter((id) => id !== w.id) }));
+              }
+            }}
+            className="h-4 w-4 rounded border-zinc-600 bg-zinc-700 text-emerald-500 focus:ring-emerald-500/20"
+          />
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-zinc-300 group-hover:text-white transition-colors">{w.name}</span>
+            <span className="text-xs text-zinc-600">{w.blockchain}</span>
+          </div>
+        </label>
+      ))}
+    </div>
+  )}
+</div>
               <div>
   <label className="mb-1.5 block text-sm font-medium text-zinc-300">Mint Price <span className="text-zinc-600">(optional)</span></label>
   <MintPriceInput
