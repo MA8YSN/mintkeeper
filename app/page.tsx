@@ -16,6 +16,7 @@ type Wallet = {
   id: string;
   name: string;
   address: string;
+    blockchain: string;
 };
 
 type Project = {
