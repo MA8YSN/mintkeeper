@@ -6,7 +6,7 @@ import { useCryptoPrices, getUsdValue } from "@/lib/useCryptoPrices";
 import { MintPriceInput } from "@/components/MintPriceInput";
 import { ChainBadge, type Chain } from "@/components/ChainBadge";
 import { useUser, useClerk } from "@clerk/nextjs";
-
+import { ImageUploader } from "@/components/ImageUploader";
 
 type WlStatus = "FCFS" | "GTD";
 type WlStatusColor = "emerald" | "amber";
@@ -261,25 +261,30 @@ export default function Home() {
 
   let image_url: string | null = null;
 
-  if (form.image) {
-    const ext = form.image.name.split(".").pop();
-    const fileName = `${crypto.randomUUID()}.${ext}`;
-    const { error: uploadError } = await supabase.storage
-      .from("project-images")
-      .upload(fileName, form.image);
+if (form.image) {
+  const ext = form.image.name.split(".").pop();
+  const fileName = `${crypto.randomUUID()}.${ext}`;
 
-    if (uploadError) {
-      console.error("Upload error:", uploadError.message);
-      setUploading(false);
-      return;
-    }
+  const { error: uploadError } = await supabase.storage
+    .from("project-images")
+    .upload(fileName, form.image);
 
-    const { data: urlData } = supabase.storage
-      .from("project-images")
-      .getPublicUrl(fileName);
-
-    image_url = urlData.publicUrl;
+  if (uploadError) {
+    console.error("Upload error:", uploadError.message);
+    setUploading(false);
+    return;
   }
+
+  const { data: urlData } = supabase.storage
+    .from("project-images")
+    .getPublicUrl(fileName);
+
+  image_url = urlData.publicUrl;
+
+} else if (imagePreview && imagePreview.startsWith("http")) {
+  // User pasted an image URL instead of uploading a file
+  image_url = imagePreview;
+}
 
   const { data, error } = await supabase
     .from("projects")
@@ -377,27 +382,36 @@ mint_currency: project.mint_currency || "ETH",
   if (!editProject || !editForm.name.trim() || !editForm.mint_date.match(/^\d{4}-\d{2}-\d{2}$/) || !user) return;
   setEditUploading(true);
 
-  let image_url = editProject.image_url;
+ let image_url = editProject.image_url;
 
-  if (editForm.image) {
-    const ext = editForm.image.name.split(".").pop();
-    const fileName = `${crypto.randomUUID()}.${ext}`;
-    const { error: uploadError } = await supabase.storage
-      .from("project-images")
-      .upload(fileName, editForm.image);
+if (editForm.image) {
+  const ext = editForm.image.name.split(".").pop();
+  const fileName = `${crypto.randomUUID()}.${ext}`;
 
-    if (uploadError) {
-      console.error("Upload error:", uploadError.message);
-      setEditUploading(false);
-      return;
-    }
+  const { error: uploadError } = await supabase.storage
+    .from("project-images")
+    .upload(fileName, editForm.image);
 
-    const { data: urlData } = supabase.storage
-      .from("project-images")
-      .getPublicUrl(fileName);
-
-    image_url = urlData.publicUrl;
+  if (uploadError) {
+    console.error("Upload error:", uploadError.message);
+    setEditUploading(false);
+    return;
   }
+
+  const { data: urlData } = supabase.storage
+    .from("project-images")
+    .getPublicUrl(fileName);
+
+  image_url = urlData.publicUrl;
+
+} else if (editImagePreview && editImagePreview.startsWith("http")) {
+  // User is using an image URL
+  image_url = editImagePreview;
+
+} else if (!editImagePreview) {
+  // Image was removed
+  image_url = null;
+}
 
   const { error } = await supabase
     .from("projects")
@@ -758,24 +772,24 @@ mint_currency: project.mint_currency || "ETH",
             </div>
             <form className="space-y-4 px-4 py-4 sm:px-6 sm:py-5" onSubmit={(e) => { e.preventDefault(); handleSave(); }}>
               <div>
-                <label className="mb-1.5 block text-sm font-medium text-zinc-300">Cover Image <span className="text-zinc-600">(optional)</span></label>
-                {imagePreview ? (
-                  <div className="relative h-32 w-full overflow-hidden rounded-lg">
-                    <img src={imagePreview} alt="Preview" className="h-full w-full object-cover" />
-                    <button type="button" onClick={() => { setImagePreview(null); setForm((p) => ({ ...p, image: null })); }} className="absolute right-2 top-2 rounded-lg bg-zinc-900/80 p-1 text-zinc-400 hover:text-white">
-                      <CloseIcon />
-                    </button>
-                  </div>
-                ) : (
-                  <label className="flex h-32 w-full cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-zinc-700 bg-zinc-800/40 transition-colors hover:border-zinc-600 hover:bg-zinc-800/60">
-                    <svg className="h-8 w-8 text-zinc-600" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
-                    </svg>
-                    <span className="mt-2 text-xs text-zinc-500">Click to upload image</span>
-                    <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
-                  </label>
-                )}
-              </div>
+  <label className="mb-1.5 block text-sm font-medium text-zinc-300">Cover Image <span className="text-zinc-600">(optional)</span></label>
+  <ImageUploader
+    preview={imagePreview}
+    uploading={uploading}
+    onFileSelect={(file) => {
+      setForm((p) => ({ ...p, image: file }));
+      setImagePreview(URL.createObjectURL(file));
+    }}
+    onUrlSelect={(url) => {
+      setForm((p) => ({ ...p, image: null }));
+      setImagePreview(url);
+    }}
+    onClear={() => {
+      setImagePreview(null);
+      setForm((p) => ({ ...p, image: null }));
+    }}
+  />
+</div>
               <div>
                 <label className="mb-1.5 block text-sm font-medium text-zinc-300">Project Name</label>
                 <input type="text" value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} placeholder="e.g. Zelij Origins" className={inputClassName} autoFocus />
@@ -864,25 +878,25 @@ mint_currency: project.mint_currency || "ETH",
               <button type="button" onClick={closeEditModal} className="rounded-lg p-1.5 text-zinc-400 hover:bg-zinc-800 hover:text-white transition-colors"><CloseIcon /></button>
             </div>
             <form className="space-y-4 px-4 py-4 sm:px-6 sm:py-5" onSubmit={(e) => { e.preventDefault(); handleEditSave(); }}>
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-zinc-300">Cover Image <span className="text-zinc-600">(optional)</span></label>
-                {editImagePreview ? (
-                  <div className="relative h-32 w-full overflow-hidden rounded-lg">
-                    <img src={editImagePreview} alt="Preview" className="h-full w-full object-cover" />
-                    <button type="button" onClick={() => { setEditImagePreview(null); setEditForm((p) => ({ ...p, image: null })); }} className="absolute right-2 top-2 rounded-lg bg-zinc-900/80 p-1 text-zinc-400 hover:text-white">
-                      <CloseIcon />
-                    </button>
-                  </div>
-                ) : (
-                  <label className="flex h-32 w-full cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-zinc-700 bg-zinc-800/40 transition-colors hover:border-zinc-600 hover:bg-zinc-800/60">
-                    <svg className="h-8 w-8 text-zinc-600" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
-                    </svg>
-                    <span className="mt-2 text-xs text-zinc-500">Click to upload new image</span>
-                    <input type="file" accept="image/*" className="hidden" onChange={(e) => { const file = e.target.files?.[0]; if (!file) return; setEditForm((p) => ({ ...p, image: file })); setEditImagePreview(URL.createObjectURL(file)); }} />
-                  </label>
-                )}
-              </div>
+             <div>
+  <label className="mb-1.5 block text-sm font-medium text-zinc-300">Cover Image <span className="text-zinc-600">(optional)</span></label>
+  <ImageUploader
+    preview={editImagePreview}
+    uploading={editUploading}
+    onFileSelect={(file) => {
+      setEditForm((p) => ({ ...p, image: file }));
+      setEditImagePreview(URL.createObjectURL(file));
+    }}
+    onUrlSelect={(url) => {
+      setEditForm((p) => ({ ...p, image: null }));
+      setEditImagePreview(url);
+    }}
+    onClear={() => {
+      setEditImagePreview(null);
+      setEditForm((p) => ({ ...p, image: null }));
+    }}
+  />
+</div>
               <div>
                 <label className="mb-1.5 block text-sm font-medium text-zinc-300">Project Name</label>
                 <input type="text" value={editForm.name} onChange={(e) => setEditForm((p) => ({ ...p, name: e.target.value }))} placeholder="e.g. Zelij Origins" className={inputClassName} autoFocus />
