@@ -235,6 +235,19 @@ export default function Home() {
     return matchesFilter && matchesSearch;
   });
 
+const sortedProjects = [...filteredProjects].sort((a, b) => {
+  const daysA = getDaysRemaining(a.mint_date);
+  const daysB = getDaysRemaining(b.mint_date);
+
+  // Upcoming projects first
+  if (daysA >= 0 && daysB < 0) return -1;
+  if (daysA < 0 && daysB >= 0) return 1;
+
+  // Then sort by closest mint date
+  return daysA - daysB;
+});
+
+
   const activeCount = projects.filter((p) => !p.minted).length;
   const mintedCount = projects.filter((p) => p.minted).length;
   const gtdCount = projects.filter((p) => p.wl_status === "GTD" && !p.minted).length;
@@ -579,7 +592,7 @@ if (editForm.image) {
           </div>
 
           <div className="grid gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6">
-            {filteredProjects.map((project) => {
+            {sortedProjects.map((project) => {
               const daysRemaining = getDaysRemaining(project.mint_date);
               const wlStatusColor = statusColorMap[project.wl_status];
               const xLink = cleanOptionalText(project.x_link);
