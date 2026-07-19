@@ -18,7 +18,7 @@ type Project = {
   id: string;
   name: string;
   wl_status: WlStatus;
-  mint_date: string;
+  mint_date: string | null;
   wallet_id: string | null;
   minted: boolean;
   image_url: string | null;
@@ -38,21 +38,32 @@ const statusStyles = {
   FCFS: "bg-amber-500/10 text-amber-400 ring-amber-500/20",
 } as const;
 
-function formatMintDate(isoDate: string): string {
-  if (!isoDate) return "";
+function formatMintDate(isoDate: string | null): string {
+  if (!isoDate) return "Not set";
+
   const [year, month, day] = isoDate.split("-").map(Number);
+
   return new Date(year, month - 1, day).toLocaleDateString("en-US", {
-    month: "long", day: "numeric", year: "numeric",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
   });
 }
 
-function getDaysRemaining(isoDate: string): number {
-  if (!isoDate) return 0;
+function getDaysRemaining(isoDate: string | null): number | null {
+  if (!isoDate) return null;
+
   const today = new Date();
   today.setHours(0, 0, 0, 0);
+
   const [year, month, day] = isoDate.split("-").map(Number);
+
   const mint = new Date(year, month - 1, day);
-  return Math.max(0, Math.ceil((mint.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)));
+
+  return Math.max(
+    0,
+    Math.ceil((mint.getTime() - today.getTime()) / 86400000)
+  );
 }
 
 function cleanOptionalText(val: string | null | undefined): string {
@@ -132,7 +143,10 @@ export default function ProjectDetailPage() {
   useEffect(() => {
     const checkAuth = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) router.push("/login");
+    if (!user) {
+  router.push("/sign-in");
+  return;
+}
     };
     checkAuth();
   }, []);
@@ -261,10 +275,25 @@ export default function ProjectDetailPage() {
           <div className="flex items-center justify-between rounded-xl border border-zinc-800 bg-zinc-900/50 px-4 py-3.5">
             <span className="text-sm text-zinc-500">Mint Date</span>
             <div className="text-right">
-              <p className="text-sm font-medium text-zinc-200">{formatMintDate(project.mint_date)}</p>
-              <p className={`text-xs font-semibold ${daysRemaining === 0 ? "text-red-400" : "text-emerald-400"}`}>
-                {daysRemaining === 0 ? "Today" : `${daysRemaining} days left`}
-              </p>
+              <p className="text-sm font-medium text-zinc-200">
+  {formatMintDate(project.mint_date)}
+</p>
+
+<p
+  className={`text-xs font-semibold ${
+    daysRemaining === null
+      ? "text-zinc-500"
+      : daysRemaining === 0
+      ? "text-red-400"
+      : "text-emerald-400"
+  }`}
+>
+  {daysRemaining === null
+    ? "No mint date"
+    : daysRemaining === 0
+    ? "Today"
+    : `${daysRemaining} days left`}
+</p>
             </div>
           </div>
           {project.wallets && (
