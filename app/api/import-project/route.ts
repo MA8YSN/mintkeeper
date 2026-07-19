@@ -91,17 +91,22 @@ export async function POST(req: NextRequest) {
     .select("id")
     .single();
 
-  if (error) {
-    console.error("Import error:", error.message);
+ if (error) {
+  console.error("SUPABASE ERROR:", error);
 
-    return NextResponse.json(
-      { error: "Failed to create project" },
-      {
-        status: 500,
-        headers: corsHeaders,
-      }
-    );
-  }
+  return NextResponse.json(
+    {
+      error: error.message,
+      code: error.code,
+      details: error.details,
+      hint: error.hint,
+    },
+    {
+      status: 500,
+      headers: corsHeaders,
+    }
+  );
+}
 
   return NextResponse.json(
     {
