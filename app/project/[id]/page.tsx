@@ -11,7 +11,7 @@ type WlStatus = "FCFS" | "GTD";
 type Wallet = {
   id: string;
   name: string;
-  address: string;
+  address: string | null;
 };
 
 type Project = {
@@ -160,7 +160,35 @@ export default function ProjectDetailPage() {
         .single();
       if (error) { console.error("Load error:", error.message); setLoading(false); return; }
       if (data) {
-        setProject(data);
+       setProject({
+  ...data,
+
+  mint_date: data.mint_date || null,
+
+  notes:
+    data.notes &&
+    !["null", "nullable", "undefined"].includes(
+      data.notes.toLowerCase()
+    )
+      ? data.notes
+      : null,
+
+  x_link:
+    data.x_link &&
+    !["null", "nullable", "undefined"].includes(
+      data.x_link.toLowerCase()
+    )
+      ? data.x_link
+      : null,
+
+  discord_link:
+    data.discord_link &&
+    !["null", "nullable", "undefined"].includes(
+      data.discord_link.toLowerCase()
+    )
+      ? data.discord_link
+      : null,
+});
         setNotes(cleanOptionalText(data.notes));
         setXLink(cleanOptionalText(data.x_link));
         setDiscordLink(cleanOptionalText(data.discord_link));
@@ -303,13 +331,16 @@ export default function ProjectDetailPage() {
             </div>
           )}
           {project.wallets && (
-            <div className="flex items-center justify-between rounded-xl border border-zinc-800 bg-zinc-900/50 px-4 py-3.5">
-              <span className="text-sm text-zinc-500">Address</span>
-              <span className="font-mono text-xs text-zinc-400">
-                {project.wallets.address.slice(0, 6)}...{project.wallets.address.slice(-4)}
-              </span>
-            </div>
-          )}
+  <div className="flex items-center justify-between rounded-xl border border-zinc-800 bg-zinc-900/50 px-4 py-3.5">
+    <span className="text-sm text-zinc-500">Address</span>
+
+    <span className="font-mono text-xs text-zinc-400">
+      {project.wallets.address
+        ? `${project.wallets.address.slice(0, 6)}...${project.wallets.address.slice(-4)}`
+        : "No wallet"}
+    </span>
+  </div>
+)}
           <div className="flex items-center justify-between rounded-xl border border-zinc-800 bg-zinc-900/50 px-4 py-3.5">
             <span className="text-sm text-zinc-500">Status</span>
             <span className={`text-sm font-medium ${project.minted ? "text-zinc-500" : "text-emerald-400"}`}>
