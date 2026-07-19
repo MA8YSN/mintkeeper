@@ -105,7 +105,11 @@ export default function ProfilePage() {
   const [editingWallet, setEditingWallet] = useState<Wallet | null>(null);
   const [saving, setSaving] = useState(false);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
-
+const [apiKey, setApiKey] = useState<string | null>(null);
+const [apiKeyLoading, setApiKeyLoading] = useState(true);
+const [apiKeyVisible, setApiKeyVisible] = useState(false);
+const [apiKeyCopied, setApiKeyCopied] = useState(false);
+const [apiKeyGenerating, setApiKeyGenerating] = useState(false);
   useEffect(() => {
     if (!isLoaded || !user) return;
     const load = async () => {
@@ -114,7 +118,10 @@ export default function ProfilePage() {
         .order("is_primary", { ascending: false })
         .order("created_at", { ascending: false });
       if (w) setWallets(w);
-
+const res = await fetch("/api/api-keys");
+const json = await res.json();
+setApiKey(json.key?.key ?? null);
+setApiKeyLoading(false);
       const { data: pw } = await supabase
         .from("project_wallets")
         .select("project_id, wallet_id, projects(name)")
@@ -139,7 +146,28 @@ export default function ProfilePage() {
       else alert(err.message);
     }
   };
+const handleGenerateKey = async () => {
+  setApiKeyGenerating(true);
+  const res = await fetch("/api/api-keys", { method: "POST" });
+  const json = await res.json();
+  setApiKey(json.key?.key ?? null);
+  setApiKeyVisible(true);
+  setApiKeyGenerating(false);
+};
 
+const handleRevokeKey = async () => {
+  if (!confirm("Revoke your API key? The Chrome Extension will stop working until you generate a new one.")) return;
+  await fetch("/api/api-keys", { method: "DELETE" });
+  setApiKey(null);
+  setApiKeyVisible(false);
+};
+
+const handleCopyKey = async () => {
+  if (!apiKey) return;
+  await navigator.clipboard.writeText(apiKey);
+  setApiKeyCopied(true);
+  setTimeout(() => setApiKeyCopied(false), 2000);
+};
   const handleDisconnect = async (id: string, key: string) => {
     setDisconnecting(key);
     try {
@@ -398,7 +426,75 @@ export default function ProfilePage() {
             ))}
           </div>
         </div>
-
+{/* ── Chrome Extension / API Key ── */}
+<div className="mb-6 rounded-2xl border border-zinc-800/80 bg-zinc-900/50">
+  <div className="border-b border-zinc-800/60 px-5 py-4">
+    <div className="flex items-center gap-2">
+      <svg className="h-4 w-4 text-zinc-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244" />
+      </svg>
+      <h2 className="text-sm font-semibold text-white">Chrome Extension</h2>
+    </div>
+    <p className="mt-0.5 text-xs text-zinc-500">Use this API key to connect the MintKeeper Helper extension.</p>
+  </div>
+  <div className="p-5">
+    {apiKeyLoading ? (
+      <div className="h-10 animate-pulse rounded-xl bg-zinc-800" />
+    ) : apiKey ? (
+      <div className="space-y-3">
+        <div className="flex items-center gap-2 rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3">
+          <code className="flex-1 font-mono text-xs text-emerald-400 truncate">
+            {apiKeyVisible ? apiKey : `mk_live_${"•".repeat(24)}`}
+          </code>
+          <button
+            type="button"
+            onClick={() => setApiKeyVisible((v) => !v)}
+            className="shrink-0 rounded-lg p-1.5 text-zinc-600 transition-colors hover:text-zinc-300"
+            title={apiKeyVisible ? "Hide" : "Show"}
+          >
+            {apiKeyVisible ? (
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88"/></svg>
+            ) : (
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z"/><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/></svg>
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={handleCopyKey}
+            className="shrink-0 rounded-lg p-1.5 text-zinc-600 transition-colors hover:text-zinc-300"
+            title="Copy"
+          >
+            {apiKeyCopied ? (
+              <svg className="h-4 w-4 text-emerald-400" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5"/></svg>
+            ) : (
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184"/></svg>
+            )}
+          </button>
+        </div>
+        <div className="flex gap-2">
+          <button type="button" onClick={handleGenerateKey} disabled={apiKeyGenerating}
+            className="rounded-lg border border-zinc-700 bg-zinc-800/50 px-3 py-1.5 text-xs font-medium text-zinc-300 transition-colors hover:bg-zinc-800 hover:text-white disabled:opacity-40">
+            {apiKeyGenerating ? "Generating..." : "Regenerate"}
+          </button>
+          <button type="button" onClick={handleRevokeKey}
+            className="rounded-lg border border-red-500/20 bg-red-500/5 px-3 py-1.5 text-xs font-medium text-red-400 transition-colors hover:bg-red-500/10">
+            Revoke
+          </button>
+        </div>
+        <p className="text-xs text-zinc-600">Keep this key secret. Anyone with this key can add projects to your account.</p>
+      </div>
+    ) : (
+      <div className="flex flex-col items-start gap-3">
+        <p className="text-xs text-zinc-500">No API key generated yet. Generate one to use the Chrome Extension.</p>
+        <button type="button" onClick={handleGenerateKey} disabled={apiKeyGenerating}
+          className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-zinc-950 shadow-lg shadow-emerald-500/20 transition-all hover:bg-emerald-400 disabled:opacity-40 active:scale-[0.98]">
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 5.25a3 3 0 0 1 3 3m3 0a6 6 0 0 1-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 0 1 21.75 8.25Z"/></svg>
+          {apiKeyGenerating ? "Generating..." : "Generate API Key"}
+        </button>
+      </div>
+    )}
+  </div>
+</div>
         {/* ── Danger Zone ── */}
         <div className="rounded-2xl border border-red-500/10 bg-red-500/5 px-5 py-4">
           <div className="flex items-center justify-between">
