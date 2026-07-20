@@ -364,7 +364,7 @@ export default function ProjectDetailPage() {
           </div>
         </div>
 
-       {/*  {/* Mint Price */}
+        {/* Mint Price */}
         <div className="mb-8">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-sm font-medium uppercase tracking-wider text-zinc-500">Mint Price</h2>
@@ -387,7 +387,7 @@ export default function ProjectDetailPage() {
               ≈ <span className="text-emerald-400">{getUsdValue(parseFloat(mintPrice), mintCurrency, cryptoPrices)}</span> USD
             </p>
           )}
-        </div> */}
+        </div>
 
         {/* Quick Links */}
         <div className="mb-8">
