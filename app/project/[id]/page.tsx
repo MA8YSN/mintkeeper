@@ -127,13 +127,21 @@ function useAutoSave(
 
   return { status, trigger, retry };
 }
-
+ console.log("ProjectDetailPage started");
 export default function ProjectDetailPage() {
+  console.log("1");
+
   console.log("ProjectDetailPage started");
 
   const { id } = useParams<{ id: string }>();
+    console.log("2");
+
   const router = useRouter();
+  console.log("3");
+
   const [project, setProject] = useState<Project | null>(null);
+  console.log("4");
+
   const [loading, setLoading] = useState(true);
   const [notes, setNotes] = useState("");
   const [xLink, setXLink] = useState("");
@@ -142,7 +150,8 @@ export default function ProjectDetailPage() {
   const [mintCurrency, setMintCurrency] = useState("ETH");
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const cryptoPrices = useCryptoPrices();
-
+  console.log("5");
+  
   useEffect(() => {
     const checkAuth = async () => {
       const { data: { user } } = await supabase.auth.getUser();
