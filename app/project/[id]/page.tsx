@@ -436,24 +436,20 @@ export default function ProjectDetailPage() {
             </div>
           </div>
         </div>
-        {/* Actions */}
-        <div className="mb-8 flex flex-col gap-3 sm:flex-row">
-          {!project.minted && (
-            <button
-              type="button"
-              onClick={handleMarkAsMinted}
-              className="flex-1 rounded-xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-zinc-950 shadow-lg shadow-emerald-500/20 transition-all hover:bg-emerald-400"
-            >
-              ✓ Mark as Minted
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={() => setDeleteConfirm(true)}
-            className="flex-1 rounded-xl border border-red-500/20 bg-red-500/5 px-4 py-3 text-sm font-semibold text-red-400 transition-colors hover:bg-red-500/10"
-          >
-            Delete Project
-          </button>
+
+        {/* Notes */}
+        <div className="mb-8">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-sm font-medium uppercase tracking-wider text-zinc-500">Notes</h2>
+            <SaveIndicator status={notesAutoSave.status} onRetry={notesAutoSave.retry} />
+          </div>
+          <textarea
+            value={notes}
+            onChange={(e) => { setNotes(e.target.value); notesAutoSave.trigger(); }}
+            placeholder="Add notes about this project..."
+            rows={4}
+            className="w-full rounded-xl border border-zinc-800 bg-zinc-900/50 px-4 py-3 text-sm text-white placeholder:text-zinc-600 transition-colors focus:border-emerald-500/50 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 resize-none"
+          />
         </div>
 
       </div>
