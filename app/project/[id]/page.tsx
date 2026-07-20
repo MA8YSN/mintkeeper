@@ -364,31 +364,6 @@ export default function ProjectDetailPage() {
           </div>
         </div>
 
-        {/* Mint Price */}
-        <div className="mb-8">
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-sm font-medium uppercase tracking-wider text-zinc-500">Mint Price</h2>
-            <SaveIndicator status={mintAutoSave.status} onRetry={mintAutoSave.retry} />
-          </div>
-          <MintPriceInput
-            price={mintPrice}
-            currency={mintCurrency}
-            onPriceChange={(v) => {
-              setMintPrice(v);
-              mintAutoSave.trigger();
-            }}
-            onCurrencyChange={(v) => {
-              setMintCurrency(v);
-              mintAutoSave.trigger();
-            }}
-          />
-          {mintPrice && cryptoPrices[mintCurrency] && (
-            <p className="mt-1.5 px-1 text-xs text-zinc-500">
-              ≈ <span className="text-emerald-400">{getUsdValue(parseFloat(mintPrice), mintCurrency, cryptoPrices)}</span> USD
-            </p>
-          )}
-        </div>
-
         {/* Quick Links */}
         <div className="mb-8">
           <div className="mb-3 flex items-center justify-between">
