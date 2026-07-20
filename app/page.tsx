@@ -977,7 +977,7 @@ if (editForm.image) {
 </div>
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={closeEditModal} className="flex-1 rounded-xl border border-zinc-700 bg-zinc-800/50 px-4 py-2.5 text-sm font-medium text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors">Cancel</button>
-                <button type="submit" disabled={editUploading || !editForm.name.trim() || !editForm.mint_date.match(/^\d{4}-\d{2}-\d{2}$/)} className="flex-1 rounded-xl bg-emerald-500 px-4 py-2.5 text-sm font-semibold text-zinc-950 shadow-lg shadow-emerald-500/20 hover:bg-emerald-400 disabled:opacity-40 disabled:cursor-not-allowed transition-all">
+                <button type="submit" disabled={editUploading || !editForm.name.trim() || !editForm.mint_date || !(/^\d{4}-\d{2}-\d{2}$/ .test(editForm.mint_date) )} className="flex-1 rounded-xl bg-emerald-500 px-4 py-2.5 text-sm font-semibold text-zinc-950 shadow-lg shadow-emerald-500/20 hover:bg-emerald-400 disabled:opacity-40 disabled:cursor-not-allowed transition-all">
                   {editUploading ? "Saving..." : "Save Changes"}
                 </button>
               </div>
