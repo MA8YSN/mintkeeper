@@ -5,8 +5,9 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { MintPriceInput } from "@/components/MintPriceInput";
 import { useCryptoPrices, getUsdValue } from "@/lib/useCryptoPrices";
-
+import { useUser } from "@clerk/nextjs";
 type WlStatus = "FCFS" | "GTD";
+
 
 type Wallet = {
   id: string;
@@ -128,6 +129,8 @@ function useAutoSave(
 }
 
 export default function ProjectDetailPage() {
+  console.log("ProjectDetailPage started");
+
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const [project, setProject] = useState<Project | null>(null);
