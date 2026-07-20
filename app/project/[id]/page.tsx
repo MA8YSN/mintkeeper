@@ -163,31 +163,28 @@ export default function ProjectDetailPage() {
        setProject({
   ...data,
 
-  mint_date: data.mint_date || null,
+  wl_status:
+    data.wl_status === "FCFS" || data.wl_status === "GTD"
+      ? data.wl_status
+      : "FCFS",
 
-  notes:
-    data.notes &&
-    !["null", "nullable", "undefined"].includes(
-      data.notes.toLowerCase()
-    )
-      ? data.notes
-      : null,
+  mint_date: data.mint_date ?? null,
 
-  x_link:
-    data.x_link &&
-    !["null", "nullable", "undefined"].includes(
-      data.x_link.toLowerCase()
-    )
-      ? data.x_link
-      : null,
+  notes: typeof data.notes === "string"
+    ? cleanOptionalText(data.notes) || null
+    : null,
 
-  discord_link:
-    data.discord_link &&
-    !["null", "nullable", "undefined"].includes(
-      data.discord_link.toLowerCase()
-    )
-      ? data.discord_link
-      : null,
+  x_link: typeof data.x_link === "string"
+    ? cleanOptionalText(data.x_link) || null
+    : null,
+
+  discord_link: typeof data.discord_link === "string"
+    ? cleanOptionalText(data.discord_link) || null
+    : null,
+
+  wallets: Array.isArray(data.wallets)
+    ? data.wallets[0] ?? null
+    : data.wallets ?? null,
 });
         setNotes(cleanOptionalText(data.notes));
         setXLink(cleanOptionalText(data.x_link));
@@ -277,7 +274,11 @@ export default function ProjectDetailPage() {
 
         {project.image_url ? (
           <div className="mb-6 h-56 w-full overflow-hidden rounded-2xl sm:h-72">
-            <img src={project.image_url} alt={project.name} className="h-full w-full object-cover" />
+            <img
+  src={project.image_url || "/placeholder.png"}
+  alt={project.name}
+  className="h-full w-full object-cover"
+/>
           </div>
         ) : (
           <div className="mb-6 flex h-56 w-full items-center justify-center rounded-2xl bg-gradient-to-br from-zinc-800 to-zinc-900 sm:h-72">
@@ -294,7 +295,9 @@ export default function ProjectDetailPage() {
               </span>
             )}
           </div>
-          <span className={`shrink-0 rounded-full px-3 py-1.5 text-sm font-medium ring-1 ring-inset ${statusStyles[project.wl_status]}`}>
+          <span className={`shrink-0 rounded-full px-3 py-1.5 text-sm font-medium ring-1 ring-inset ${
+  statusStyles[project.wl_status as WlStatus] ?? statusStyles.FCFS
+}`}>
             {project.wl_status}
           </span>
         </div>
@@ -335,9 +338,9 @@ export default function ProjectDetailPage() {
     <span className="text-sm text-zinc-500">Address</span>
 
     <span className="font-mono text-xs text-zinc-400">
-      {project.wallets.address
-        ? `${project.wallets.address.slice(0, 6)}...${project.wallets.address.slice(-4)}`
-        : "No wallet"}
+      {typeof project.wallets?.address === "string"
+  ? `${project.wallets.address.slice(0,6)}...${project.wallets.address.slice(-4)}`
+  : "No wallet"}
     </span>
   </div>
 )}
@@ -350,7 +353,13 @@ export default function ProjectDetailPage() {
           <div className="flex items-center justify-between rounded-xl border border-zinc-800 bg-zinc-900/50 px-4 py-3.5">
             <span className="text-sm text-zinc-500">Added</span>
             <span className="text-sm text-zinc-400">
-              {new Date(project.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+              {project.created_at
+  ? new Date(project.created_at).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    })
+  : "Unknown"}
             </span>
           </div>
         </div>
