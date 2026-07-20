@@ -452,6 +452,26 @@ export default function ProjectDetailPage() {
           />
         </div>
 
+        {/* Actions */}
+        <div className="mb-8 flex flex-col gap-3 sm:flex-row">
+          {!project.minted && (
+            <button
+              type="button"
+              onClick={handleMarkAsMinted}
+              className="flex-1 rounded-xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-zinc-950 shadow-lg shadow-emerald-500/20 transition-all hover:bg-emerald-400"
+            >
+              ✓ Mark as Minted
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => setDeleteConfirm(true)}
+            className="flex-1 rounded-xl border border-red-500/20 bg-red-500/5 px-4 py-3 text-sm font-semibold text-red-400 transition-colors hover:bg-red-500/10"
+          >
+            Delete Project
+          </button>
+        </div>
+
       </div>
 
       {deleteConfirm && (
