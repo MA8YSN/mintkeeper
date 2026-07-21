@@ -14,16 +14,24 @@ export const CHAIN_COLORS: Record<string, string> = {
 function ChainIcon({ chain, size = 20 }: { chain: string; size?: number }) {
   const color = CHAIN_COLORS[chain] ?? "#888";
 
-  if (chain === "ETH" || chain === "BASE") {
-    const c = chain === "ETH" ? "#627EEA" : "#0052FF";
-    return (
-      <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
-        <circle cx="16" cy="16" r="16" fill={c} fillOpacity="0.15" />
-        <path d="M16 6l-6.5 10.5L16 20l6.5-3.5L16 6z" fill={c} opacity="0.8" />
-        <path d="M16 20l-6.5-3.5L16 26l6.5-6.5L16 20z" fill={c} />
-      </svg>
-    );
-  }
+  if (chain === "ETH") {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
+      <circle cx="16" cy="16" r="16" fill="#627EEA" fillOpacity="0.15" />
+      <path d="M16 6l-6.5 10.5L16 20l6.5-3.5L16 6z" fill="#627EEA" opacity="0.8" />
+      <path d="M16 20l-6.5-3.5L16 26l6.5-6.5L16 20z" fill="#627EEA" />
+    </svg>
+  );
+}
+
+if (chain === "BASE") {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32">
+      <circle cx="16" cy="16" r="16" fill="#0052FF"/>
+      <circle cx="16" cy="16" r="7" fill="white"/>
+    </svg>
+  );
+}
 
   if (chain === "SOL") return (
     <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
