@@ -6,17 +6,12 @@ import { useCryptoPrices, getUsdValue } from "@/lib/useCryptoPrices";
 
 const CHAINS = [
   { symbol: "ETH", label: "Ethereum" },
-  { symbol: "POL", label: "Polygon" },
   { symbol: "BASE", label: "Base" },
-  { symbol: "ARB", label: "Arbitrum" },
-  { symbol: "OP", label: "Optimism" },
   { symbol: "SOL", label: "Solana" },
   { symbol: "BNB", label: "BNB Chain" },
-  { symbol: "AVAX", label: "Avalanche" },
+  { symbol: "ETH", label: "ROBINHOOD" },
   { symbol: "ABS", label: "Abstract" },
-  { symbol: "APE", label: "ApeChain" },
-  { symbol: "SON", label: "Soneium" },
-  { symbol: "MON", label: "Monad" },
+ 
 ];
 
 interface MintPriceInputProps {
