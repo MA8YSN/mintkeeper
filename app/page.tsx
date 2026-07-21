@@ -699,8 +699,7 @@ if (editForm.image) {
         </span>
       ))}
     </div>
-)}
-                      {project.mint_price && (
+)}{project.mint_price && (
   <div className="group/price relative flex items-center justify-between gap-4 rounded-lg bg-zinc-800/40 px-3 py-2.5">
     <dt className="text-sm text-zinc-500">Mint Price</dt>
     <dd className="flex items-center gap-2">
@@ -720,7 +719,9 @@ if (editForm.image) {
           <span className="text-sm font-semibold text-white">{project.mint_price} {project.mint_currency}</span>
         </div>
         {cryptoPrices[project.mint_currency ?? ""] && (
-          <p className="mt-1 text-xs text-emerald-400">≈ {getUsdValue(project.mint_price, project.mint_currency ?? "", cryptoPrices)} USD</p>
+          <p className="mt-1 text-xs text-emerald-400">
+            ≈ {getUsdValue(project.mint_price, project.mint_currency ?? "", cryptoPrices)} USD
+          </p>
         )}
       </div>
     </dd>
