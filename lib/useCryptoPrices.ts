@@ -1,18 +1,26 @@
 import { useEffect, useState } from "react";
 
 export const CHAIN_LIST = [
-  { symbol: "ETH", label: "Ethereum", coingeckoId: "ethereum" },
-  { symbol: "POL", label: "Polygon", coingeckoId: "matic-network" },
-  { symbol: "BASE", label: "Base", coingeckoId: "ethereum" },
-  { symbol: "ARB", label: "Arbitrum", coingeckoId: "ethereum" },
-  { symbol: "OP", label: "Optimism", coingeckoId: "ethereum" },
-  { symbol: "SOL", label: "Solana", coingeckoId: "solana" },
-  { symbol: "BNB", label: "BNB Chain", coingeckoId: "binancecoin" },
-  { symbol: "AVAX", label: "Avalanche", coingeckoId: "avalanche-2" },
-  { symbol: "ABS", label: "Abstract", coingeckoId: "ethereum" },
-  { symbol: "APE", label: "ApeChain", coingeckoId: "apecoin" },
-  { symbol: "SON", label: "Soneium", coingeckoId: "ethereum" },
-  { symbol: "MON", label: "Monad", coingeckoId: "ethereum" },
+  {
+    symbol: "ETH",
+    label: "Ethereum",
+    coingeckoId: "ethereum",
+  },
+  {
+    symbol: "BASE",
+    label: "Base",
+    coingeckoId: "ethereum",
+  },
+  {
+    symbol: "SOL",
+    label: "Solana",
+    coingeckoId: "solana",
+  },
+  {
+    symbol: "ROBINHOOD",
+    label: "Robinhood",
+    coingeckoId: "ethereum",
+  },
 ] as const;
 
 export type ChainSymbol = typeof CHAIN_LIST[number]["symbol"];
