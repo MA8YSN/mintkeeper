@@ -6,24 +6,16 @@ export { CHAIN_LIST };
 
 export const CHAIN_COLORS: Record<string, string> = {
   ETH: "#627EEA",
-  POL: "#8247E5",
   BASE: "#0052FF",
-  ARB: "#28A0F0",
-  OP: "#FF0420",
   SOL: "#9945FF",
-  BNB: "#F3BA2F",
-  AVAX: "#E84142",
-  ABS: "#627EEA",
-  APE: "#0054F9",
-  SON: "#627EEA",
-  MON: "#836EF9",
+  ROBINHOOD: "#C7FF00",
 };
 
 function ChainIcon({ chain, size = 20 }: { chain: string; size?: number }) {
   const color = CHAIN_COLORS[chain] ?? "#888";
 
-  if (chain === "ETH" || chain === "BASE" || chain === "ARB" || chain === "OP" || chain === "ABS" || chain === "SON" || chain === "MON") {
-    const c = chain === "ETH" ? "#627EEA" : chain === "BASE" ? "#0052FF" : chain === "ARB" ? "#28A0F0" : chain === "OP" ? "#FF0420" : chain === "MON" ? "#836EF9" : "#627EEA";
+  if (chain === "ETH" || chain === "BASE") {
+    const c = chain === "ETH" ? "#627EEA" : "#0052FF";
     return (
       <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
         <circle cx="16" cy="16" r="16" fill={c} fillOpacity="0.15" />
@@ -39,7 +31,21 @@ function ChainIcon({ chain, size = 20 }: { chain: string; size?: number }) {
       <path d="M10 20h12l-2 2H8l2-2zM10 15h12l-2 2H8l2-2zM22 10H10l2-2h12l-2 2z" fill="#9945FF" />
     </svg>
   );
-
+if (chain === "ROBINHOOD") return (
+  <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
+    <circle cx="16" cy="16" r="16" fill="#C7FF00" fillOpacity="0.15" />
+    <text
+      x="16"
+      y="21"
+      textAnchor="middle"
+      fontSize="15"
+      fontWeight="bold"
+      fill="#C7FF00"
+    >
+      R
+    </text>
+  </svg>
+);
   if (chain === "BTC") return (
     <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
       <circle cx="16" cy="16" r="16" fill="#F7931A" fillOpacity="0.15" />
