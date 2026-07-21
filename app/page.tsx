@@ -699,34 +699,69 @@ if (editForm.image) {
         </span>
       ))}
     </div>
-)}{project.mint_price && (
-  <div className="group/price relative flex items-center justify-between gap-4 rounded-lg bg-zinc-800/40 px-3 py-2.5">
-    <dt className="text-sm text-zinc-500">Mint Price</dt>
+)}<div className="group/price relative flex items-center justify-between gap-4 rounded-lg bg-zinc-800/40 px-3 py-2.5">
+  <dt className="text-sm text-zinc-500">Mint Price</dt>
+
+  {project.mint_price ? (
     <dd className="flex items-center gap-2">
-      <ChainBadge chain={(project.mint_currency ?? "ETH") as Chain} showLabel={false} size={16} />
+      <ChainBadge
+        chain={(project.mint_currency ?? "ETH") as Chain}
+        showLabel={false}
+        size={16}
+      />
+
       <div className="text-right">
-        <p className="text-sm font-semibold text-white">{project.mint_price} {project.mint_currency}</p>
+        <p className="text-sm font-semibold text-white">
+          {project.mint_price} {project.mint_currency}
+        </p>
+
         {cryptoPrices[project.mint_currency ?? ""] && (
           <p className="text-xs text-emerald-400">
-            ≈ {getUsdValue(project.mint_price, project.mint_currency ?? "", cryptoPrices)} USD
+            ≈{" "}
+            {getUsdValue(
+              project.mint_price,
+              project.mint_currency ?? "",
+              cryptoPrices
+            )}{" "}
+            USD
           </p>
         )}
       </div>
+
       <div className="pointer-events-none absolute bottom-full right-0 mb-2 hidden w-44 rounded-xl border border-zinc-700 bg-zinc-900 px-3 py-2.5 shadow-xl group-hover/price:block z-30">
         <p className="text-xs text-zinc-500 mb-1">Mint Price</p>
+
         <div className="flex items-center gap-2">
-          <ChainBadge chain={(project.mint_currency ?? "ETH") as Chain} showLabel={false} size={18} />
-          <span className="text-sm font-semibold text-white">{project.mint_price} {project.mint_currency}</span>
+          <ChainBadge
+            chain={(project.mint_currency ?? "ETH") as Chain}
+            showLabel={false}
+            size={18}
+          />
+
+          <span className="text-sm font-semibold text-white">
+            {project.mint_price} {project.mint_currency}
+          </span>
         </div>
+
         {cryptoPrices[project.mint_currency ?? ""] && (
           <p className="mt-1 text-xs text-emerald-400">
-            ≈ {getUsdValue(project.mint_price, project.mint_currency ?? "", cryptoPrices)} USD
+            ≈{" "}
+            {getUsdValue(
+              project.mint_price,
+              project.mint_currency ?? "",
+              cryptoPrices
+            )}{" "}
+            USD
           </p>
         )}
       </div>
     </dd>
-  </div>
-)}
+  ) : (
+    <dd className="text-sm font-semibold text-emerald-400">
+      🟢 FREE MINT
+    </dd>
+  )}
+</div>
                     </dl>
 
                     {(xLink || discordLink) && (
