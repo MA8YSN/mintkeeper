@@ -21,7 +21,7 @@ type FormState = {
 };
 
 const BLOCKCHAINS = [
-  "ETH", "SOL", "POL", "BASE", "ARB", "OP", "BNB", "AVAX", "ABS", "APE", "SON", "MON"
+  "ETH", "SOL","BASE","ETHr", "BNB", "ABS", 
 ];
 
 const emptyForm: FormState = { name: "", address: "", blockchain: "ETH", notes: "" };
@@ -33,14 +33,6 @@ const CHAIN_COLORS: Record<string, { bg: string; text: string; border: string; d
   SOL:  { bg: "bg-purple-500/10",  text: "text-purple-400",  border: "border-purple-500/20",  dot: "bg-purple-400" },
   POL:  { bg: "bg-violet-500/10",  text: "text-violet-400",  border: "border-violet-500/20",  dot: "bg-violet-400" },
   BASE: { bg: "bg-blue-600/10",    text: "text-blue-300",    border: "border-blue-600/20",    dot: "bg-blue-300" },
-  ARB:  { bg: "bg-sky-500/10",     text: "text-sky-400",     border: "border-sky-500/20",     dot: "bg-sky-400" },
-  OP:   { bg: "bg-red-500/10",     text: "text-red-400",     border: "border-red-500/20",     dot: "bg-red-400" },
-  BNB:  { bg: "bg-yellow-500/10",  text: "text-yellow-400",  border: "border-yellow-500/20",  dot: "bg-yellow-400" },
-  AVAX: { bg: "bg-red-600/10",     text: "text-red-300",     border: "border-red-600/20",     dot: "bg-red-300" },
-  ABS:  { bg: "bg-zinc-500/10",    text: "text-zinc-300",    border: "border-zinc-500/20",    dot: "bg-zinc-300" },
-  APE:  { bg: "bg-blue-700/10",    text: "text-blue-200",    border: "border-blue-700/20",    dot: "bg-blue-200" },
-  SON:  { bg: "bg-zinc-400/10",    text: "text-zinc-300",    border: "border-zinc-400/20",    dot: "bg-zinc-300" },
-  MON:  { bg: "bg-indigo-500/10",  text: "text-indigo-400",  border: "border-indigo-500/20",  dot: "bg-indigo-400" },
 };
 
 function ChainIcon({ chain, size = 20 }: { chain: string; size?: number }) {
