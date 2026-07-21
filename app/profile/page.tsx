@@ -29,17 +29,10 @@ type ProjectWallet = {
 
 const CHAINS = [
   { id: "ETH",  label: "Ethereum",  color: "#627EEA" },
-  { id: "POL",  label: "Polygon",   color: "#8247E5" },
+  { id: "ETHr",  label: "ROBINHOOD",   color: "#9CFF2E" },
   { id: "BASE", label: "Base",      color: "#0052FF" },
-  { id: "ARB",  label: "Arbitrum",  color: "#28A0F0" },
-  { id: "OP",   label: "Optimism",  color: "#FF0420" },
   { id: "SOL",  label: "Solana",    color: "#9945FF" },
-  { id: "BNB",  label: "BNB Chain", color: "#F3BA2F" },
-  { id: "AVAX", label: "Avalanche", color: "#E84142" },
-  { id: "ABS",  label: "Abstract",  color: "#888888" },
-  { id: "APE",  label: "ApeChain",  color: "#0054F9" },
-  { id: "SON",  label: "Soneium",   color: "#888888" },
-  { id: "MON",  label: "Monad",     color: "#836EF9" },
+
 ];
 
 function ChainIcon({ chainId, size = 24 }: { chainId: string; size?: number }) {
