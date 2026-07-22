@@ -1,42 +1,20 @@
 import { useEffect, useState } from "react";
 
 export const CHAIN_LIST = [
-  {
-    symbol: "ETH",
-    label: "Ethereum",
-    coingeckoId: "ethereum",
-  },
-  {
-    symbol: "BASE",
-    label: "Base",
-    coingeckoId: "ethereum",
-  },
-  {
-    symbol: "SOL",
-    label: "Solana",
-    coingeckoId: "solana",
-  },
-  {
-    symbol: "ROBINHOOD",
-    label: "Robinhood",
-    coingeckoId: "ethereum",
-  },
+  { symbol: "ETH",       label: "Ethereum",        coingeckoId: "ethereum" },
+  { symbol: "SOL",       label: "Solana",           coingeckoId: "solana"   },
+  { symbol: "ROBINHOOD", label: "Robinhood Chain",  coingeckoId: "ethereum" },
 ] as const;
 
 export type ChainSymbol = typeof CHAIN_LIST[number]["symbol"];
 
-const COINGECKO_IDS = [...new Set(CHAIN_LIST.map((c) => c.coingeckoId))];
-
-const SYMBOL_TO_ID: Record<string, string> = {};
-for (const chain of CHAIN_LIST) {
-  SYMBOL_TO_ID[chain.symbol] = chain.coingeckoId;
-}
+const UNIQUE_IDS = [...new Set(CHAIN_LIST.map((c) => c.coingeckoId))];
 
 let cachedPrices: Record<string, number> | null = null;
 let lastFetch = 0;
 
-export function useCryptoPrices() {
-  const [prices, setPrices] = useState<Record<string, number>>(cachedPrices || {});
+export function useCryptoPrices(): Record<string, number> {
+  const [prices, setPrices] = useState<Record<string, number>>(cachedPrices ?? {});
 
   useEffect(() => {
     const now = Date.now();
@@ -45,7 +23,7 @@ export function useCryptoPrices() {
       return;
     }
 
-    const ids = COINGECKO_IDS.join(",");
+    const ids = UNIQUE_IDS.join(",");
     fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd`)
       .then((r) => r.json())
       .then((data) => {
@@ -71,5 +49,7 @@ export function getUsdValue(
   const rate = prices[currency];
   if (!rate) return null;
   const usd = price * rate;
-  return usd < 0.01 ? "<$0.01" : `$${usd.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return usd < 0.01
+    ? "<$0.01"
+    : `$${usd.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
