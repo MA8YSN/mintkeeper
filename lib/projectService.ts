@@ -40,7 +40,15 @@ export async function updateProject(
    .eq("user_id", userId)
     .select()
     .single();
+console.log("UPDATE RESULT");
 
+console.log({
+  projectId,
+  userId,
+  payload,
+  data,
+  error,
+});
   if (error) {
     throw new Error(`Failed to update project: ${error.message}`);
   }
