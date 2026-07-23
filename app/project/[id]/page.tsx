@@ -254,7 +254,10 @@ const saveLinksFn = useCallback(async () => {
   const notesAutoSave = useAutoSave(saveNotesFn);
   const linksAutoSave = useAutoSave(saveLinksFn);
   const mintAutoSave = useAutoSave(saveMintFn);
-
+useEffect(() => {
+  if (!project) return;
+  mintAutoSave.trigger();
+}, [mintPrice, mintCurrency]);
   const handleMarkAsMinted = async () => {
   if (!project || !user) return;
 
@@ -406,14 +409,9 @@ const saveLinksFn = useCallback(async () => {
           <MintPriceInput
             price={mintPrice}
             currency={mintCurrency}
-            onPriceChange={(v) => {
-              setMintPrice(v);
-              mintAutoSave.trigger();
-            }}
-            onCurrencyChange={(v) => {
-              setMintCurrency(v);
-              mintAutoSave.trigger();
-            }}
+           onPriceChange={setMintPrice}
+onCurrencyChange={setMintCurrency}
+
           />
           {mintPrice && cryptoPrices[mintCurrency] && (
             <p className="mt-1.5 px-1 text-xs text-zinc-500">
