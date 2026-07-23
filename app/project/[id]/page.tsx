@@ -238,6 +238,11 @@ const saveLinksFn = useCallback(async () => {
   const saveMintFn = useCallback(async () => {
   if (!project || !user) return;
 
+  console.log("Saving mint", {
+    mintPrice,
+    mintCurrency,
+  });
+
   const updated = await updateProject(user.id, project.id, {
     mint_price: mintPrice ? parseFloat(mintPrice) : null,
     mint_currency: mintCurrency,
