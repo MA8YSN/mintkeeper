@@ -254,6 +254,20 @@ const saveLinksFn = useCallback(async () => {
   const notesAutoSave = useAutoSave(saveNotesFn);
   const linksAutoSave = useAutoSave(saveLinksFn);
   const mintAutoSave = useAutoSave(saveMintFn);
+  useEffect(() => {
+  if (!project) return;
+  notesAutoSave.trigger();
+}, [notes]);
+
+useEffect(() => {
+  if (!project) return;
+  linksAutoSave.trigger();
+}, [xLink, discordLink]);
+
+useEffect(() => {
+  if (!project) return;
+  mintAutoSave.trigger();
+}, [mintPrice, mintCurrency]);
 useEffect(() => {
   if (!project) return;
   mintAutoSave.trigger();
@@ -432,7 +446,9 @@ onCurrencyChange={setMintCurrency}
               <input
                 type="text"
                 value={xLink}
-                onChange={(e) => { setXLink(e.target.value); linksAutoSave.trigger(); }}
+               onChange={(e) => {
+  setXLink(e.target.value);
+}}
                 placeholder="https://x.com/..."
                 className="w-full rounded-xl border border-zinc-800 bg-zinc-900/50 px-4 py-3 text-sm text-white placeholder:text-zinc-600 transition-colors focus:border-emerald-500/50 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
               />
@@ -442,7 +458,10 @@ onCurrencyChange={setMintCurrency}
               <input
                 type="text"
                 value={discordLink}
-                onChange={(e) => { setDiscordLink(e.target.value); linksAutoSave.trigger(); }}
+             onChange={(e) => {
+  setDiscordLink(e.target.value);
+  linksAutoSave.trigger();
+}}
                 placeholder="https://discord.gg/..."
                 className="w-full rounded-xl border border-zinc-800 bg-zinc-900/50 px-4 py-3 text-sm text-white placeholder:text-zinc-600 transition-colors focus:border-emerald-500/50 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
               />
@@ -476,7 +495,9 @@ onCurrencyChange={setMintCurrency}
           </div>
           <textarea
             value={notes}
-            onChange={(e) => { setNotes(e.target.value); notesAutoSave.trigger(); }}
+          onChange={(e) => {
+  setNotes(e.target.value);
+}}
             placeholder="Add notes about this project..."
             rows={4}
             className="w-full rounded-xl border border-zinc-800 bg-zinc-900/50 px-4 py-3 text-sm text-white placeholder:text-zinc-600 transition-colors focus:border-emerald-500/50 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 resize-none"
