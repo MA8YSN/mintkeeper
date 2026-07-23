@@ -1,4 +1,5 @@
 "use client";
+import { updateProject } from "@/lib/projectService";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
@@ -6,6 +7,8 @@ import { useParams, useRouter } from "next/navigation";
 import { MintPriceInput } from "@/components/MintPriceInput";
 import { useCryptoPrices, getUsdValue } from "@/lib/useCryptoPrices";
 import { useUser } from "@clerk/nextjs";
+
+
 type WlStatus = "FCFS" | "GTD";
 
 
@@ -129,6 +132,7 @@ function useAutoSave(
 }
  console.log("ProjectDetailPage started");
 export default function ProjectDetailPage() {
+
   console.log("1");
 
   console.log("ProjectDetailPage started");
@@ -150,6 +154,7 @@ export default function ProjectDetailPage() {
   const [mintCurrency, setMintCurrency] = useState("ETH");
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const cryptoPrices = useCryptoPrices();
+  const { user } = useUser();
   console.log("5");
   
   useEffect(() => {
@@ -210,43 +215,53 @@ export default function ProjectDetailPage() {
   }, [id]);
 
   // Auto-save functions
-  const saveNotesFn = useCallback(async () => {
-    if (!project) return;
-    const { error } = await supabase.from("projects")
-      .update({ notes: notes || null })
-      .eq("id", project.id);
-    if (error) throw error;
-  }, [project, notes]);
+const saveNotesFn = useCallback(async () => {
+  if (!project || !user) return;
 
-  const saveLinksFn = useCallback(async () => {
-    if (!project) return;
-    const { error } = await supabase.from("projects")
-      .update({ x_link: xLink || null, discord_link: discordLink || null })
-      .eq("id", project.id);
-    if (error) throw error;
-  }, [project, xLink, discordLink]);
+  const updated = await updateProject(user.id, project.id, {
+    notes: notes || null,
+  });
 
+  setProject((p) => (p ? { ...p, ...updated } : p));
+}, [project, user, notes]);
+const saveLinksFn = useCallback(async () => {
+  if (!project || !user) return;
+
+  const updated = await updateProject(user.id, project.id, {
+    x_link: xLink || null,
+    discord_link: discordLink || null,
+  });
+
+  setProject((p) => (p ? { ...p, ...updated } : p));
+}, [project, user, xLink, discordLink]);
   const saveMintFn = useCallback(async () => {
-    if (!project) return;
-    const { error } = await supabase.from("projects")
-      .update({
-        mint_price: mintPrice ? parseFloat(mintPrice) : null,
-        mint_currency: mintCurrency,
-      })
-      .eq("id", project.id);
-    if (error) throw error;
-  }, [project, mintPrice, mintCurrency]);
+  if (!project || !user) return;
+
+  const updated = await updateProject(user.id, project.id, {
+    mint_price: mintPrice ? parseFloat(mintPrice) : null,
+    mint_currency: mintCurrency,
+  });
+
+  setProject((p) => (p ? { ...p, ...updated } : p));
+}, [project, user, mintPrice, mintCurrency]);
 
   const notesAutoSave = useAutoSave(saveNotesFn);
   const linksAutoSave = useAutoSave(saveLinksFn);
   const mintAutoSave = useAutoSave(saveMintFn);
 
   const handleMarkAsMinted = async () => {
-    if (!project) return;
-    const { error } = await supabase.from("projects").update({ minted: true }).eq("id", project.id);
-    if (error) { console.error("Minted error:", error.message); return; }
-    setProject((p) => p ? { ...p, minted: true } : p);
-  };
+  if (!project || !user) return;
+
+  try {
+    const updated = await updateProject(user.id, project.id, {
+      minted: true,
+    });
+
+    setProject((p) => (p ? { ...p, ...updated } : p));
+  } catch (err) {
+    console.error("Minted error:", err);
+  }
+};
 
   const handleDelete = async () => {
     if (!project) return;
