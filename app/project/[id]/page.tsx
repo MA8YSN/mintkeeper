@@ -228,10 +228,15 @@ const saveNotesFn = useCallback(async () => {
 const saveLinksFn = useCallback(async () => {
   if (!project || !user) return;
 
-  const updated = await updateProject(user.id, project.id, {
-    x_link: xLink || null,
-    discord_link: discordLink || null,
-  });
+  console.log("Saving links", {
+  xLink,
+  discordLink,
+});
+
+const updated = await updateProject(user.id, project.id, {
+  x_link: xLink || null,
+  discord_link: discordLink || null,
+});
 
   setProject((p) => (p ? { ...p, ...updated } : p));
 }, [project, user, xLink, discordLink]);
