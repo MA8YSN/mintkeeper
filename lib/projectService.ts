@@ -112,7 +112,28 @@ export async function enableSharing(projectId: string): Promise<string> {
 
   if (fetchError || !existing) throw new Error("Project not found or access denied");
 
-  const shareId = existing.share_id ?? generateShareId();
+  let shareId = existing.share_id;
+
+if (!shareId) {
+  for (let i = 0; i < 5; i++) {
+    const candidate = generateShareId();
+
+    const { data } = await supabase
+      .from("projects")
+      .select("id")
+      .eq("share_id", candidate)
+      .maybeSingle();
+
+    if (!data) {
+      shareId = candidate;
+      break;
+    }
+  }
+
+  if (!shareId) {
+    throw new Error("Unable to generate unique share ID");
+  }
+}
 
   const { error } = await supabase
     .from("projects")
@@ -200,7 +221,16 @@ export async function importProject(shareId: string): Promise<string> {
     user_id: user.id,
     minted: false,
   };
+const { data: existingImport } = await supabase
+  .from("projects")
+  .select("id")
+  .eq("user_id", user.id)
+  .eq("share_id", shareId)
+  .maybeSingle();
 
+if (existingImport) {
+  throw new Error("Project already imported");
+}
   const { data, error } = await supabase
     .from("projects")
     .insert([payload])
