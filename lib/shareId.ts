@@ -8,7 +8,8 @@ const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789
 const ID_LENGTH = 8;
 
 export function generateShareId(): string {
-  const bytes = crypto.getRandomValues(new Uint8Array(ID_LENGTH));
+  const bytes = new Uint8Array(ID_LENGTH);
+crypto.getRandomValues(bytes);
   return Array.from(bytes)
     .map((b) => ALPHABET[b % ALPHABET.length])
     .join("");
