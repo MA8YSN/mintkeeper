@@ -159,16 +159,12 @@ const [shareId, setShareId] = useState<string | null>(null);
 const [shareLoading, setShareLoading] = useState(false);
 const [shareCopied, setShareCopied] = useState(false);
   
-  useEffect(() => {
-    const checkAuth = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-  router.push("/sign-in");
-  return;
-}
-    };
-    checkAuth();
-  }, []);
+ useEffect(() => {
+  if (user === undefined) return; // still loading
+  if (!user) {
+    router.replace("/sign-in");
+  }
+}, [user, router]);
 
   useEffect(() => {
     const load = async () => {
