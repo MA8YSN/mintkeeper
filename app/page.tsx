@@ -222,7 +222,7 @@ export default function Home() {
       p.name,
       cleanOptionalText(p.x_link),
      p.project_wallets
-  ?.map((pw) => pw.wallets.name)
+  ?.map((pw) => pw.wallets?.name ?? "Unknown Wallet")
   .join(" "),
       cleanOptionalText(p.notes),
       cleanOptionalText(p.discord_link),
@@ -695,7 +695,7 @@ if (editForm.image) {
         >
           <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
 
-          {pw.wallets.name}
+          {pw.wallets?.name ?? "Unknown Wallet"}
         </span>
       ))}
     </div>
