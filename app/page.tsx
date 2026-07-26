@@ -53,7 +53,7 @@ type ProjectWallet = {
     id: string;
     name: string;
     blockchain: string;
-  };
+  } | null;
 };
 
 const WL_STATUS_OPTIONS: WlStatus[] = ["FCFS", "GTD"];
