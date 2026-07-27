@@ -7,7 +7,7 @@ import { useParams, useRouter } from "next/navigation";
 import { MintPriceInput } from "@/components/MintPriceInput";
 import { useCryptoPrices, getUsdValue } from "@/lib/useCryptoPrices";
 import { useUser } from "@clerk/nextjs";
-import { enableSharing, disableSharing } from "@/lib/projectService";
+
 
 type WlStatus = "FCFS" | "GTD";
 
@@ -154,10 +154,7 @@ export default function ProjectDetailPage() {
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const cryptoPrices = useCryptoPrices();
   const { user } = useUser();
-  const [isShared, setIsShared] = useState(false);
-const [shareId, setShareId] = useState<string | null>(null);
-const [shareLoading, setShareLoading] = useState(false);
-const [shareCopied, setShareCopied] = useState(false);
+  
  
 
 
@@ -204,8 +201,7 @@ const [shareCopied, setShareCopied] = useState(false);
     ? data.wallets[0] ?? null
     : data.wallets ?? null,
 });
-setIsShared(data.is_shared ?? false);
-setShareId(data.share_id ?? null);
+
         setNotes(cleanOptionalText(data.notes));
         setXLink(cleanOptionalText(data.x_link));
         setDiscordLink(cleanOptionalText(data.discord_link));
@@ -289,33 +285,6 @@ useEffect(() => {
   } catch (err) {
     console.error("Minted error:", err);
   }
-};
-const handleToggleShare = async () => {
-  if (!project) return;
-  setShareLoading(true);
-  try {
-    if (isShared) {
-      await disableSharing(project.id);
-      setIsShared(false);
-    } else {
-      const id = await enableSharing(project.id);
-      setIsShared(true);
-      setShareId(id);
-    }
-  } catch (err) {
-    console.error("Share toggle error:", err);
-  } finally {
-    setShareLoading(false);
-  }
-};
-
-const handleCopyShareLink = async () => {
-  if (!shareId) return;
-  await navigator.clipboard.writeText(
-    `${process.env.NEXT_PUBLIC_APP_URL}/p/${shareId}`
-  );
-  setShareCopied(true);
-  setTimeout(() => setShareCopied(false), 2000);
 };
 
 
@@ -535,52 +504,7 @@ onCurrencyChange={setMintCurrency}
             className="w-full rounded-xl border border-zinc-800 bg-zinc-900/50 px-4 py-3 text-sm text-white placeholder:text-zinc-600 transition-colors focus:border-emerald-500/50 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 resize-none"
           />
         </div>
-{/* Share */}
-<div className="mb-8 rounded-xl border border-zinc-800 bg-zinc-900/50 p-5">
-  <div className="flex items-center justify-between gap-4">
-    <div>
-      <p className="text-sm font-medium text-white">Public Link</p>
-      <p className="text-xs text-zinc-500 mt-0.5">
-        {isShared
-          ? "Anyone with the link can view and import this project."
-          : "Share this project so others can discover and import it."}
-      </p>
-    </div>
-    <button
-      type="button"
-      onClick={handleToggleShare}
-      disabled={shareLoading}
-      aria-label={isShared ? "Disable sharing" : "Enable sharing"}
-      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none disabled:opacity-40 ${
-        isShared ? "bg-emerald-500" : "bg-zinc-700"
-      }`}
-    >
-      <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform duration-200 ${
-        isShared ? "translate-x-5" : "translate-x-0"
-      }`} />
-    </button>
-  </div>
 
-  {isShared && shareId && (
-    <div className="mt-4 space-y-2">
-      <div className="flex items-center gap-2">
-        <code className="flex-1 truncate rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-xs text-emerald-400">
-          {process.env.NEXT_PUBLIC_APP_URL}/p/{shareId}
-        </code>
-        <button
-          type="button"
-          onClick={handleCopyShareLink}
-          className="shrink-0 rounded-lg border border-zinc-700 bg-zinc-800/50 px-3 py-2 text-xs font-medium text-zinc-300 transition-colors hover:bg-zinc-800 hover:text-white"
-        >
-          {shareCopied ? "✓ Copied" : "Copy"}
-        </button>
-      </div>
-      <p className="text-xs text-zinc-600">
-        This link can be shared in Discord, X, Telegram, or Cosadyn reminders.
-      </p>
-    </div>
-  )}
-</div>
         {/* Actions */}
         <div className="mb-8 flex flex-col gap-3 sm:flex-row">
           {!project.minted && (
