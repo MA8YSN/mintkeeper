@@ -7,11 +7,20 @@ type Props = { params: { shareId: string } };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const project = await getPublicProject(params.shareId);
-  if (!project) return { title: "Project Unavailable — MintKeeper" };
+  if (!project) {
+    return { title: "Project Unavailable — MintKeeper" };
+  }
   return {
     title: `${project.name} — MintKeeper`,
     description: project.notes?.slice(0, 160) ?? `Mint date: ${project.mint_date ?? "TBA"}`,
     openGraph: {
+      title: project.name,
+      description: project.notes?.slice(0, 160) ?? `Mint date: ${project.mint_date ?? "TBA"}`,
+      images: project.image_url ? [{ url: project.image_url }] : [],
+      type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
       title: project.name,
       images: project.image_url ? [project.image_url] : [],
     },
