@@ -7,7 +7,7 @@ import { useParams, useRouter } from "next/navigation";
 import { MintPriceInput } from "@/components/MintPriceInput";
 import { useCryptoPrices, getUsdValue } from "@/lib/useCryptoPrices";
 import { useUser } from "@clerk/nextjs";
-
+import { enableSharing, disableSharing } from "@/lib/projectService";
 
 type WlStatus = "FCFS" | "GTD";
 
@@ -158,7 +158,9 @@ export default function ProjectDetailPage() {
 const [shareId, setShareId] = useState<string | null>(null);
 const [shareLoading, setShareLoading] = useState(false);
 const [shareCopied, setShareCopied] = useState(false);
-  
+ 
+
+
  useEffect(() => {
   if (user === undefined) return; // still loading
   if (!user) {
@@ -274,10 +276,7 @@ useEffect(() => {
   if (!project) return;
   mintAutoSave.trigger();
 }, [mintPrice, mintCurrency]);
-useEffect(() => {
-  if (!project) return;
-  mintAutoSave.trigger();
-}, [mintPrice, mintCurrency]);
+
   const handleMarkAsMinted = async () => {
   if (!project || !user) return;
 
@@ -296,13 +295,12 @@ const handleToggleShare = async () => {
   setShareLoading(true);
   try {
     if (isShared) {
-      await fetch(`/api/projects/${project.id}/share`, { method: "DELETE" });
+      await disableSharing(project.id);
       setIsShared(false);
     } else {
-      const res = await fetch(`/api/projects/${project.id}/share`, { method: "POST" });
-      const json = await res.json();
+      const id = await enableSharing(project.id);
       setIsShared(true);
-      setShareId(json.shareId);
+      setShareId(id);
     }
   } catch (err) {
     console.error("Share toggle error:", err);
@@ -319,6 +317,8 @@ const handleCopyShareLink = async () => {
   setShareCopied(true);
   setTimeout(() => setShareCopied(false), 2000);
 };
+
+
   const handleDelete = async () => {
     if (!project) return;
     const { error } = await supabase.from("projects").delete().eq("id", project.id);
@@ -493,7 +493,6 @@ onCurrencyChange={setMintCurrency}
                 value={discordLink}
              onChange={(e) => {
   setDiscordLink(e.target.value);
-  linksAutoSave.trigger();
 }}
                 placeholder="https://discord.gg/..."
                 className="w-full rounded-xl border border-zinc-800 bg-zinc-900/50 px-4 py-3 text-sm text-white placeholder:text-zinc-600 transition-colors focus:border-emerald-500/50 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
@@ -536,7 +535,52 @@ onCurrencyChange={setMintCurrency}
             className="w-full rounded-xl border border-zinc-800 bg-zinc-900/50 px-4 py-3 text-sm text-white placeholder:text-zinc-600 transition-colors focus:border-emerald-500/50 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 resize-none"
           />
         </div>
+{/* Share */}
+<div className="mb-8 rounded-xl border border-zinc-800 bg-zinc-900/50 p-5">
+  <div className="flex items-center justify-between gap-4">
+    <div>
+      <p className="text-sm font-medium text-white">Public Link</p>
+      <p className="text-xs text-zinc-500 mt-0.5">
+        {isShared
+          ? "Anyone with the link can view and import this project."
+          : "Share this project so others can discover and import it."}
+      </p>
+    </div>
+    <button
+      type="button"
+      onClick={handleToggleShare}
+      disabled={shareLoading}
+      aria-label={isShared ? "Disable sharing" : "Enable sharing"}
+      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none disabled:opacity-40 ${
+        isShared ? "bg-emerald-500" : "bg-zinc-700"
+      }`}
+    >
+      <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform duration-200 ${
+        isShared ? "translate-x-5" : "translate-x-0"
+      }`} />
+    </button>
+  </div>
 
+  {isShared && shareId && (
+    <div className="mt-4 space-y-2">
+      <div className="flex items-center gap-2">
+        <code className="flex-1 truncate rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-xs text-emerald-400">
+          {process.env.NEXT_PUBLIC_APP_URL}/p/{shareId}
+        </code>
+        <button
+          type="button"
+          onClick={handleCopyShareLink}
+          className="shrink-0 rounded-lg border border-zinc-700 bg-zinc-800/50 px-3 py-2 text-xs font-medium text-zinc-300 transition-colors hover:bg-zinc-800 hover:text-white"
+        >
+          {shareCopied ? "✓ Copied" : "Copy"}
+        </button>
+      </div>
+      <p className="text-xs text-zinc-600">
+        This link can be shared in Discord, X, Telegram, or Cosadyn reminders.
+      </p>
+    </div>
+  )}
+</div>
         {/* Actions */}
         <div className="mb-8 flex flex-col gap-3 sm:flex-row">
           {!project.minted && (
