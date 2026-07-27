@@ -1,6 +1,8 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useUser } from "@clerk/nextjs";
 import type { PublicProject } from "@/lib/projectService";
 
 type Props = {
@@ -8,31 +10,54 @@ type Props = {
   shareId: string;
 };
 
-function formatMintDate(isoDate: string | null): string {
-  if (!isoDate) return "TBA";
-  const [y, m, d] = isoDate.split("-").map(Number);
+const STATUS_STYLES = {
+  GTD:  "bg-emerald-500/10 text-emerald-400 ring-emerald-500/20",
+  FCFS: "bg-amber-500/10 text-amber-400 ring-amber-500/20",
+} as const;
+
+function formatMintDate(iso: string | null): string {
+  if (!iso) return "TBA";
+  const [y, m, d] = iso.split("-").map(Number);
   return new Date(y, m - 1, d).toLocaleDateString("en-US", {
-    month: "long", day: "numeric", year: "numeric",
+    weekday: "long", month: "long", day: "numeric", year: "numeric",
   });
 }
 
-function getDaysLeft(isoDate: string | null): number | null {
-  if (!isoDate) return null;
+function getDaysLeft(iso: string | null): number | null {
+  if (!iso) return null;
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const [y, m, d] = isoDate.split("-").map(Number);
-  const mint = new Date(y, m - 1, d);
-  return Math.max(0, Math.ceil((mint.getTime() - today.getTime()) / 86400000));
+  const [y, m, d] = iso.split("-").map(Number);
+  return Math.max(0, Math.ceil((new Date(y, m - 1, d).getTime() - today.getTime()) / 86400000));
+}
+
+function Countdown({ iso }: { iso: string | null }) {
+  const days = getDaysLeft(iso);
+  if (days === null) return null;
+  if (days === 0) return <span className="text-lg font-bold text-red-400">Minting Today 🚨</span>;
+  if (days === 1) return <span className="text-lg font-bold text-amber-400">Tomorrow ⚠️</span>;
+  return <span className="text-lg font-bold text-emerald-400">{days} days left</span>;
 }
 
 export default function SharePageClient({ project, shareId }: Props) {
+  const { isSignedIn, isLoaded } = useUser();
+  const router = useRouter();
   const [importing, setImporting] = useState(false);
   const [imported, setImported] = useState(false);
+  const [importedId, setImportedId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const daysLeft = getDaysLeft(project.mint_date);
+  // After sign-in redirect, auto-complete the pending import
+  useEffect(() => {
+    if (!isLoaded || !isSignedIn) return;
+    const pending = sessionStorage.getItem("mk_pending_import");
+    if (pending !== shareId) return;
 
-  const handleImport = async () => {
+    sessionStorage.removeItem("mk_pending_import");
+    doImport();
+  }, [isLoaded, isSignedIn]);
+
+  const doImport = async () => {
     setImporting(true);
     setError(null);
     try {
@@ -41,11 +66,10 @@ export default function SharePageClient({ project, shareId }: Props) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ shareId }),
       });
-      if (!res.ok) {
-        const json = await res.json();
-        throw new Error(json.error ?? "Import failed");
-      }
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? "Import failed");
       setImported(true);
+      setImportedId(json.projectId);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -53,16 +77,35 @@ export default function SharePageClient({ project, shareId }: Props) {
     }
   };
 
+  const handleImport = async () => {
+    if (!isLoaded) return;
+
+    if (!isSignedIn) {
+      // Save intent so we can auto-import after login
+      sessionStorage.setItem("mk_pending_import", shareId);
+      const returnUrl = encodeURIComponent(`/p/${shareId}`);
+      router.push(`/sign-in?redirect_url=${returnUrl}`);
+      return;
+    }
+
+    await doImport();
+  };
+
+  const daysLeft = getDaysLeft(project.mint_date);
+
   return (
     <div className="min-h-screen bg-zinc-950">
-      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(16,185,129,0.12),transparent)]" />
+      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(16,185,129,0.10),transparent)]" />
 
-      <div className="relative mx-auto max-w-2xl px-4 py-12 sm:px-6 lg:px-8">
+      <div className="relative mx-auto max-w-2xl px-4 py-10 sm:px-6 lg:px-8">
 
         {/* Nav */}
         <div className="mb-8 flex items-center justify-between">
-          <Link href="/" className="text-sm text-zinc-500 transition-colors hover:text-zinc-300">
-            ← MintKeeper
+          <Link href="/" className="inline-flex items-center gap-2 text-sm text-zinc-500 transition-colors hover:text-zinc-300">
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
+            </svg>
+            MintKeeper
           </Link>
           <span className="rounded-full border border-zinc-800 bg-zinc-900 px-3 py-1 text-xs text-zinc-500">
             Public Project
@@ -71,41 +114,33 @@ export default function SharePageClient({ project, shareId }: Props) {
 
         {/* Banner */}
         {project.image_url ? (
-          <div className="mb-6 h-52 w-full overflow-hidden rounded-2xl">
+          <div className="mb-6 h-56 w-full overflow-hidden rounded-2xl sm:h-72">
             <img src={project.image_url} alt={project.name} className="h-full w-full object-cover" />
           </div>
         ) : (
-          <div className="mb-6 flex h-52 w-full items-center justify-center rounded-2xl bg-gradient-to-br from-zinc-800 to-zinc-900">
-            <span className="text-6xl font-bold text-zinc-700">
-              {project.name.slice(0, 2).toUpperCase()}
-            </span>
+          <div className="mb-6 flex h-56 w-full items-center justify-center rounded-2xl bg-gradient-to-br from-zinc-800 to-zinc-900 sm:h-72">
+            <span className="text-7xl font-bold text-zinc-700">{project.name.slice(0, 2).toUpperCase()}</span>
           </div>
         )}
 
-        {/* Header */}
-        <div className="mb-8 flex items-start justify-between gap-4">
-          <h1 className="text-3xl font-bold text-white">{project.name}</h1>
-          <span className={`shrink-0 rounded-full px-3 py-1.5 text-sm font-medium ring-1 ring-inset ${
-            project.wl_status === "GTD"
-              ? "bg-emerald-500/10 text-emerald-400 ring-emerald-500/20"
-              : "bg-amber-500/10 text-amber-400 ring-amber-500/20"
-          }`}>
+        {/* Title + status */}
+        <div className="mb-6 flex items-start justify-between gap-4">
+          <h1 className="text-3xl font-bold text-white sm:text-4xl">{project.name}</h1>
+          <span className={`shrink-0 rounded-full px-3 py-1.5 text-sm font-medium ring-1 ring-inset ${STATUS_STYLES[project.wl_status]}`}>
             {project.wl_status}
           </span>
+        </div>
+
+        {/* Countdown */}
+        <div className="mb-6">
+          <Countdown iso={project.mint_date} />
         </div>
 
         {/* Info grid */}
         <div className="mb-8 grid gap-3 sm:grid-cols-2">
           <div className="flex items-center justify-between rounded-xl border border-zinc-800 bg-zinc-900/50 px-4 py-3.5">
             <span className="text-sm text-zinc-500">Mint Date</span>
-            <div className="text-right">
-              <p className="text-sm font-medium text-zinc-200">{formatMintDate(project.mint_date)}</p>
-              {daysLeft !== null && (
-                <p className={`text-xs font-semibold ${daysLeft === 0 ? "text-red-400" : "text-emerald-400"}`}>
-                  {daysLeft === 0 ? "Today" : `${daysLeft} days left`}
-                </p>
-              )}
-            </div>
+            <span className="text-sm font-medium text-zinc-200">{formatMintDate(project.mint_date)}</span>
           </div>
 
           {project.mint_price && (
@@ -118,17 +153,17 @@ export default function SharePageClient({ project, shareId }: Props) {
           )}
         </div>
 
-        {/* Notes */}
+        {/* Notes / Description */}
         {project.notes && (
-          <div className="mb-8 rounded-xl border border-zinc-800 bg-zinc-900/50 px-4 py-4">
-            <p className="mb-2 text-xs font-medium uppercase tracking-wider text-zinc-500">Notes</p>
-            <p className="text-sm text-zinc-300 whitespace-pre-wrap">{project.notes}</p>
+          <div className="mb-8 rounded-xl border border-zinc-800 bg-zinc-900/50 px-5 py-4">
+            <p className="mb-2 text-xs font-medium uppercase tracking-wider text-zinc-500">About</p>
+            <p className="text-sm leading-relaxed text-zinc-300 whitespace-pre-wrap">{project.notes}</p>
           </div>
         )}
 
-        {/* Links */}
+        {/* Official links */}
         {(project.x_link || project.discord_link) && (
-          <div className="mb-8 flex gap-3">
+          <div className="mb-8 flex flex-wrap gap-3">
             {project.x_link && (
               <a href={project.x_link} target="_blank" rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 rounded-xl border border-zinc-800 bg-zinc-900/50 px-4 py-2.5 text-sm font-medium text-zinc-300 transition-colors hover:border-zinc-700 hover:text-white">
@@ -150,38 +185,56 @@ export default function SharePageClient({ project, shareId }: Props) {
           </div>
         )}
 
-        {/* Import CTA */}
+        {/* Primary CTA */}
         <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-6">
-          <h2 className="mb-1 text-base font-semibold text-white">Track this project</h2>
-          <p className="mb-4 text-sm text-zinc-400">
-            Import into your MintKeeper to get reminders and track your mint.
-          </p>
-
-          {imported ? (
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-emerald-400">✓ Added to your dashboard</span>
-              <Link href="/" className="text-sm text-zinc-500 underline hover:text-zinc-300">
-                View dashboard
-              </Link>
+          {imported && importedId ? (
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm font-semibold text-emerald-400">✓ Added to your MintKeeper</p>
+                <p className="text-xs text-zinc-500 mt-0.5">You'll be reminded before the mint date.</p>
+              </div>
+              <div className="flex gap-2">
+                <Link href={`/project/${importedId}`}
+                  className="rounded-xl border border-zinc-700 bg-zinc-800/50 px-4 py-2 text-sm font-medium text-zinc-300 transition-colors hover:bg-zinc-800 hover:text-white">
+                  View Project
+                </Link>
+                <Link href="/"
+                  className="rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-zinc-950 shadow-lg shadow-emerald-500/20 transition-all hover:bg-emerald-400">
+                  Dashboard
+                </Link>
+              </div>
             </div>
           ) : (
             <>
+              <h2 className="mb-1 text-base font-semibold text-white">Track this mint</h2>
+              <p className="mb-4 text-sm text-zinc-400">
+                Add to your MintKeeper to get reminders and never miss the mint.
+              </p>
               <button
                 type="button"
                 onClick={handleImport}
-                disabled={importing}
-                className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-5 py-2.5 text-sm font-semibold text-zinc-950 shadow-lg shadow-emerald-500/20 transition-all hover:bg-emerald-400 disabled:opacity-40 active:scale-[0.98]"
+                disabled={importing || !isLoaded}
+                className="w-full rounded-xl bg-emerald-500 py-3 text-sm font-semibold text-zinc-950 shadow-lg shadow-emerald-500/20 transition-all hover:bg-emerald-400 disabled:opacity-40 active:scale-[0.98] sm:w-auto sm:px-8"
               >
-                {importing ? "Importing..." : "Import to MintKeeper"}
+                {importing ? "Adding..." : "➕ Add to My MintKeeper"}
               </button>
+              {!isSignedIn && isLoaded && (
+                <p className="mt-2 text-xs text-zinc-600">
+                  You'll be asked to sign in — your project will be saved automatically.
+                </p>
+              )}
               {error && <p className="mt-2 text-xs text-red-400">{error}</p>}
             </>
           )}
         </div>
 
-        <p className="mt-6 text-center text-xs text-zinc-700">
-          Shared via MintKeeper · mintkeeper.app
+        <p className="mt-8 text-center text-xs text-zinc-700">
+          Powered by{" "}
+          <Link href="/" className="text-zinc-500 hover:text-zinc-300 transition-colors">
+            MintKeeper
+          </Link>
         </p>
+
       </div>
     </div>
   );
