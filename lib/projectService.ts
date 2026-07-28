@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { generateShareId } from "@/lib/shareId";
 
 export type ProjectUpdatePayload = {
   name?: string;
@@ -20,51 +21,6 @@ export type ProjectRow = ProjectUpdatePayload & {
   created_at: string;
 };
 
-/**
- * Single canonical function for updating a project.
- * Enforces ownership by scoping the update to the authenticated user's ID.
- * Throws on any Supabase error or if the row is not found (wrong owner or bad ID).
- * Returns the updated project row.
- */
-export async function updateProject(
-  userId: string,
-  projectId: string,
-  payload: ProjectUpdatePayload
-): Promise<ProjectRow> {
- 
-
-  const { data, error } = await supabase
-    .from("projects")
-    .update(payload)
-    .eq("id", projectId)
-   .eq("user_id", userId)
-    .select()
-    .single();
-console.log("UPDATE RESULT");
-
-console.log({
-  projectId,
-  userId,
-  payload,
-  data,
-  error,
-});
-  if (error) {
-    throw new Error(`Failed to update project: ${error.message}`);
-  }
-
-  if (!data) {
-    throw new Error(
-      "Project not found or you do not have permission to update it."
-    );
-  }
-
-  return data as ProjectRow;
-}
-import { generateShareId } from "@/lib/shareId";
-
-// ── Public shape exposed on the share page ────────────────────────────────────
-// Never include: user_id, wallet_id, minted, reminder history, internal IDs.
 export type PublicProject = {
   share_id: string;
   name: string;
@@ -79,8 +35,6 @@ export type PublicProject = {
   shared_at: string;
 };
 
-// Fields an importer's new project is seeded with.
-// Intentionally omits: minted, wallet_id, user_id, share_id, is_shared.
 export type ImportPayload = {
   name: string;
   image_url: string | null;
@@ -94,46 +48,48 @@ export type ImportPayload = {
 };
 
 /**
- * Enable sharing for a project owned by the authenticated user.
- * Generates a stable share_id on first share; reuses it on subsequent enables.
- * Returns the share_id.
+ * Single canonical function for updating a project.
+ * Scoped to userId to enforce ownership.
  */
-export async function enableSharing(projectId: string): Promise<string> {
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
-  if (authError || !user) throw new Error("Not authenticated");
+export async function updateProject(
+  userId: string,
+  projectId: string,
+  payload: ProjectUpdatePayload
+): Promise<ProjectRow> {
+  const { data, error } = await supabase
+    .from("projects")
+    .update(payload)
+    .eq("id", projectId)
+    .eq("user_id", userId)
+    .select()
+    .single();
 
-  // Fetch existing share_id so we can reuse it if the owner re-enables sharing.
+  if (error) throw new Error(`Failed to update project: ${error.message}`);
+  if (!data) throw new Error("Project not found or you do not have permission to update it.");
+
+  return data as ProjectRow;
+}
+
+/**
+ * Enable sharing for a project.
+ * Reuses existing share_id if already generated so links remain stable.
+ */
+export async function enableSharing(
+  userId: string,
+  projectId: string
+): Promise<string> {
   const { data: existing, error: fetchError } = await supabase
     .from("projects")
     .select("share_id")
     .eq("id", projectId)
-    .eq("user_id", user.id)
+    .eq("user_id", userId)
     .single();
 
-  if (fetchError || !existing) throw new Error("Project not found or access denied");
-
-  let shareId = existing.share_id;
-
-if (!shareId) {
-  for (let i = 0; i < 5; i++) {
-    const candidate = generateShareId();
-
-    const { data } = await supabase
-      .from("projects")
-      .select("id")
-      .eq("share_id", candidate)
-      .maybeSingle();
-
-    if (!data) {
-      shareId = candidate;
-      break;
-    }
+  if (fetchError || !existing) {
+    throw new Error("Project not found or access denied");
   }
 
-  if (!shareId) {
-    throw new Error("Unable to generate unique share ID");
-  }
-}
+  const shareId = existing.share_id ?? generateShareId();
 
   const { error } = await supabase
     .from("projects")
@@ -143,7 +99,7 @@ if (!shareId) {
       shared_at: new Date().toISOString(),
     })
     .eq("id", projectId)
-    .eq("user_id", user.id);
+    .eq("user_id", userId);
 
   if (error) throw new Error(`Failed to enable sharing: ${error.message}`);
 
@@ -151,25 +107,25 @@ if (!shareId) {
 }
 
 /**
- * Disable sharing. The share_id is intentionally preserved so
- * the same link can be re-enabled later without breaking bookmarks.
+ * Disable sharing.
+ * Preserves share_id so the same link can be re-enabled later.
  */
-export async function disableSharing(projectId: string): Promise<void> {
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
-  if (authError || !user) throw new Error("Not authenticated");
-
+export async function disableSharing(
+  userId: string,
+  projectId: string
+): Promise<void> {
   const { error } = await supabase
     .from("projects")
     .update({ is_shared: false })
     .eq("id", projectId)
-    .eq("user_id", user.id);
+    .eq("user_id", userId);
 
   if (error) throw new Error(`Failed to disable sharing: ${error.message}`);
 }
 
 /**
  * Fetch a public project by share_id.
- * Returns only the public fields — never exposes private data.
+ * Returns only public fields — never exposes private data.
  * Returns null if the project doesn't exist or sharing is disabled.
  */
 export async function getPublicProject(shareId: string): Promise<PublicProject | null> {
@@ -199,41 +155,43 @@ export async function getPublicProject(shareId: string): Promise<PublicProject |
 /**
  * Import a public project into the authenticated user's workspace.
  * Creates an independent copy — never links back to the original.
+ * Saves share_id on the imported row so duplicate checks work correctly.
  * Private fields (wallet, minted, reminders) are never copied.
  */
-export async function importProject(shareId: string): Promise<string> {
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
-  if (authError || !user) throw new Error("Not authenticated");
-
+export async function importProject(
+  userId: string,
+  shareId: string
+): Promise<string> {
   const source = await getPublicProject(shareId);
   if (!source) throw new Error("Project unavailable");
 
-  const payload: ImportPayload & { user_id: string; minted: boolean } = {
-    name: source.name,
-    image_url: source.image_url,
-    mint_date: source.mint_date,
-    mint_price: source.mint_price,
-    mint_currency: source.mint_currency,
-    wl_status: source.wl_status,
-    notes: source.notes,
-    x_link: source.x_link,
-    discord_link: source.discord_link,
-    user_id: user.id,
-    minted: false,
-  };
-const { data: existingImport } = await supabase
-  .from("projects")
-  .select("id")
-  .eq("user_id", user.id)
-  .eq("share_id", shareId)
-  .maybeSingle();
+  // Duplicate check — has this user already imported this exact share?
+  const { data: existing } = await supabase
+    .from("projects")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("share_id", shareId)
+    .maybeSingle();
 
-if (existingImport) {
-  throw new Error("Project already imported");
-}
+  if (existing) return existing.id;
+
   const { data, error } = await supabase
     .from("projects")
-    .insert([payload])
+    .insert([{
+      name: source.name,
+      image_url: source.image_url,
+      mint_date: source.mint_date,
+      mint_price: source.mint_price,
+      mint_currency: source.mint_currency,
+      wl_status: source.wl_status,
+      notes: source.notes,
+      x_link: source.x_link,
+      discord_link: source.discord_link,
+      user_id: userId,
+      minted: false,
+      share_id: shareId,   // enables duplicate detection on future imports
+      is_shared: false,    // imported copy starts as private
+    }])
     .select("id")
     .single();
 
