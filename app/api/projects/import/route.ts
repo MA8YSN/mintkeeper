@@ -8,22 +8,22 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
-  let shareId: string;
+  let sourceProjectId: string;
   try {
     const body = await req.json();
-    shareId = body.shareId;
-    if (!shareId || typeof shareId !== "string") {
-      return NextResponse.json({ error: "shareId is required" }, { status: 400 });
+    sourceProjectId = body.sourceProjectId;
+    if (!sourceProjectId || typeof sourceProjectId !== "string") {
+      return NextResponse.json({ error: "sourceProjectId is required" }, { status: 400 });
     }
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
   try {
-    const projectId = await importProject(userId, shareId);
+    const projectId = await importProject(userId, sourceProjectId);
     return NextResponse.json({ success: true, projectId }, { status: 201 });
   } catch (err: any) {
-    const status = err.message.includes("unavailable") ? 404 : 500;
+    const status = err.message.includes("not found") ? 404 : 500;
     return NextResponse.json({ error: err.message }, { status });
   }
 }
