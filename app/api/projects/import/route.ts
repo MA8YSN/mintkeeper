@@ -1,18 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@clerk/nextjs/server";
 import { importProject } from "@/lib/projectService";
 
 export async function POST(req: NextRequest) {
+  const { userId } = await auth();
+  if (!userId) {
+    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  }
+
+  let shareId: string;
   try {
-    const { shareId } = await req.json();
+    const body = await req.json();
+    shareId = body.shareId;
     if (!shareId || typeof shareId !== "string") {
       return NextResponse.json({ error: "shareId is required" }, { status: 400 });
     }
-    const projectId = await importProject(shareId);
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+
+  try {
+    const projectId = await importProject(userId, shareId);
     return NextResponse.json({ success: true, projectId }, { status: 201 });
   } catch (err: any) {
-    const status = err.message.includes("authenticated") ? 401
-      : err.message.includes("unavailable") ? 404
-      : 500;
+    const status = err.message.includes("unavailable") ? 404 : 500;
     return NextResponse.json({ error: err.message }, { status });
   }
 }
