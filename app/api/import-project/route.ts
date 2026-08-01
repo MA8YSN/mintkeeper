@@ -6,11 +6,12 @@ const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "Content-Type, Authorization, x-api-key",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Methods":
+    "POST, OPTIONS",
+  "Access-Control-Max-Age": "86400",
 };
-
 export async function OPTIONS() {
-  return new NextResponse(null, {
+  return new Response(null, {
     status: 204,
     headers: corsHeaders,
   });
