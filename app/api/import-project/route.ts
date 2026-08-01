@@ -4,7 +4,8 @@ import { supabase } from "@/lib/supabase";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+  "Access-Control-Allow-Headers":
+    "Content-Type, Authorization, x-api-key",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
@@ -17,8 +18,12 @@ export async function OPTIONS() {
 
 export async function POST(req: NextRequest) {
   // Auth
-  const authHeader = req.headers.get("authorization");
-  const apiKey = authHeader?.replace("Bearer ", "").trim();
+const authHeader = req.headers.get("authorization");
+const xApiKey = req.headers.get("x-api-key");
+
+const apiKey =
+  authHeader?.replace("Bearer ", "").trim() ||
+  xApiKey?.trim();
 
   if (!apiKey) {
     return NextResponse.json(
