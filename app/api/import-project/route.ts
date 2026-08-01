@@ -29,12 +29,7 @@ export async function POST(req: NextRequest) {
 
   try {
   // Auth
-const authHeader = req.headers.get("authorization");
-const xApiKey = req.headers.get("x-api-key");
-
-const apiKey =
-  authHeader?.replace("Bearer ", "").trim() ||
-  xApiKey?.trim();
+const apiKey = req.headers.get("x-api-key")?.trim();
 
   if (!apiKey) {
     return NextResponse.json(
