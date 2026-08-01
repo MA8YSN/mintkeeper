@@ -25,8 +25,10 @@ export async function OPTIONS() {
 }
 
 export async function POST(req: NextRequest) {
+  console.log("===== POST HIT =====");
+
+  try {
   // Auth
-  console.log("POST HIT");
 const authHeader = req.headers.get("authorization");
 const xApiKey = req.headers.get("x-api-key");
 
@@ -132,4 +134,18 @@ const apiKey =
       headers: corsHeaders,
     }
   );
+    } catch (err) {
+    console.error("IMPORT ROUTE CRASHED");
+    console.error(err);
+
+    return NextResponse.json(
+      {
+        error: "Internal server error",
+      },
+      {
+        status: 500,
+        headers: corsHeaders,
+      }
+    );
+  }
 }
