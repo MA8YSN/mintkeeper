@@ -11,14 +11,22 @@ const corsHeaders = {
   "Access-Control-Max-Age": "86400",
 };
 export async function OPTIONS() {
+  console.log("OPTIONS HIT");
+
   return new Response(null, {
     status: 204,
-    headers: corsHeaders,
+    headers: {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Headers":
+        "Content-Type, Authorization, x-api-key",
+      "Access-Control-Allow-Methods": "POST, OPTIONS",
+    },
   });
 }
 
 export async function POST(req: NextRequest) {
   // Auth
+  console.log("POST HIT");
 const authHeader = req.headers.get("authorization");
 const xApiKey = req.headers.get("x-api-key");
 
