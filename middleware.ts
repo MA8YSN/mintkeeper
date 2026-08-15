@@ -3,7 +3,10 @@ import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 const isPublicRoute = createRouteMatcher([
   "/sign-in(.*)",
   "/sign-up(.*)",
-  "/p/(.*)",           // public share pages
+  "/p/(.*)",
+  "/project/(.*)",           // public read-only project pages
+  "/api/import-project",     // extension uses its own API key auth — not Clerk session
+  "/api/projects/import",    // same
 ]);
 
 export default clerkMiddleware(async (auth, request) => {
